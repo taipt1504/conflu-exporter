@@ -491,6 +491,10 @@ jobs:
     if: needs.setup.outputs.should-publish == 'true'
     timeout-minutes: 10
     
+    # CRITICAL: Set NPM_TOKEN at job level so all steps can access it
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -535,8 +539,6 @@ jobs:
           
           # Verify npm can authenticate
           npm whoami || echo "⚠️ npm authentication may have issues"
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm
         id: npm-publish
