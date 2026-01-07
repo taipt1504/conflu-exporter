@@ -526,9 +526,11 @@ jobs:
       - name: Setup npm authentication
         run: |
           echo "🔐 Setting up npm authentication..."
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-          echo "registry=https://registry.npmjs.org/" >> .npmrc
-          echo "✅ .npmrc configured"
+          # Create .npmrc in home directory
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > $HOME/.npmrc
+          echo "✅ .npmrc configured at $HOME/.npmrc"
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm
         id: npm-publish
@@ -538,10 +540,8 @@ jobs:
           echo "  Version: $(node -p "require('./package.json').version")"
           echo "  Registry: ${{ env.NPM_REGISTRY }}"
           
-          # Publish with provenance (npm 9+)
-          pnpm publish --no-git-checks --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Use npm publish directly (more reliable than pnpm for publishing)
+          npm publish --access public
         continue-on-error: true
 
       - name: Publish result
