@@ -89,7 +89,11 @@ export class AttachmentHandler {
     }
 
     const apiAttachments = await this.paginationHandler.fetchAll(fetchPageFn)
-    return apiAttachments.map((att) => this.transformAttachment(att))
+    const attachments = apiAttachments.map((att) => this.transformAttachment(att))
+
+    logger.debug(`Found ${attachments.length} attachments for page ${pageId}`)
+
+    return attachments
   }
 
   /**
@@ -188,18 +192,27 @@ export class AttachmentHandler {
   }
 
   /**
-   * Download all .mmd files (Mermaid diagram files) for a page
+   * Download all Mermaid diagram files for a page
    * Returns a map of filename to content
+   *
+   * Supports multiple storage formats:
+   * 1. .mmd or .mermaid files (standard format)
+   * 2. text/plain attachments with diagram name (Mermaid for Confluence plugin)
    */
   async downloadMermaidAttachments(pageId: string): Promise<Map<string, string>> {
     const attachments = await this.fetchPageAttachments(pageId)
+
+    // Find mermaid files by extension OR by text/plain MIME type
     const mermaidFiles = attachments.filter(
-      (att) => att.filename.endsWith('.mmd') || att.filename.endsWith('.mermaid'),
+      (att) =>
+        att.filename.endsWith('.mmd') ||
+        att.filename.endsWith('.mermaid') ||
+        (att.mediaType === 'text/plain' && !att.filename.includes('.'))
     )
 
     const logger = getLogger()
     if (mermaidFiles.length === 0) {
-      logger.debug(`No Mermaid (.mmd) attachments found for page ${pageId}`)
+      logger.debug(`No Mermaid diagram attachments found for page ${pageId}`)
       return new Map()
     }
 

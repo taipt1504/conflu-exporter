@@ -365,15 +365,19 @@ export class MacroParser {
   }
 
   /**
-   * Get all Mermaid attachment references (.mmd files)
-   * Returns array of .mmd filenames referenced by mermaid macros
+   * Get all Mermaid attachment references
+   * Returns array of attachment filenames referenced by mermaid macros
    * Supports both built-in 'mermaid' and 'mermaid-cloud' (Mermaid for Confluence plugin)
+   *
+   * Note: Mermaid for Confluence plugin stores diagrams as text/plain attachments
+   * with just the diagram name (no extension), so we don't filter by .mmd extension
    */
   getMermaidAttachmentReferences(storageContent: string): string[] {
     const builtinAttachments = this.getAllAttachmentReferences(storageContent, 'mermaid')
     const cloudAttachments = this.getAllAttachmentReferences(storageContent, 'mermaid-cloud')
     const allAttachments = [...builtinAttachments, ...cloudAttachments]
-    return allAttachments.filter((filename) => filename.endsWith('.mmd') || filename.endsWith('.mermaid'))
+    // Return all attachment references (with or without .mmd extension)
+    return allAttachments
   }
 
   /**

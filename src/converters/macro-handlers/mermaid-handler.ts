@@ -80,8 +80,8 @@ export class MermaidHandler {
   private convertToMarkdown(macro: ParsedMacro): string | null {
     let diagramSource = ''
 
-    // Debug: Log macro structure to understand parameters
-    this.logger.debug(`Converting ${macro.name} macro:`)
+    // Debug: Log macro structure
+    this.logger.debug(`Converting ${macro.name} macro`)
     this.logger.debug(`  - Has plain text body: ${this.macroParser.hasPlainTextBody(macro)}`)
     this.logger.debug(`  - Parameters: ${JSON.stringify(macro.parameters)}`)
 
@@ -97,18 +97,20 @@ export class MermaidHandler {
 
       this.logger.debug(`  - Attachment filename: ${filename || 'N/A'}`)
 
-      if (filename && (filename.endsWith('.mmd') || filename.endsWith('.mermaid'))) {
+      if (filename) {
         // Try to get content from cache
+        // Note: Mermaid for Confluence plugin stores diagrams as text/plain attachments
+        // with just the diagram name (no extension), e.g., "NHLAD" instead of "NHLAD.mmd"
         const cachedContent = this.attachmentContentCache.get(filename)
         if (cachedContent) {
           diagramSource = cachedContent.trim()
           this.logger.debug(
-            `Using cached mermaid content from attachment: ${filename}`,
+            `Using cached mermaid content from attachment: ${filename} (${diagramSource.length} chars)`,
           )
         } else {
           this.logger.warn(
             `Mermaid attachment ${filename} not found in cache. ` +
-              `Make sure to download attachments first.`,
+              `Make sure to download attachments first. Available files: ${Array.from(this.attachmentContentCache.keys()).join(', ')}`,
           )
           // Return placeholder with instruction
           return (
