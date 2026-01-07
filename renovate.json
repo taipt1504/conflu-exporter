@@ -1,0 +1,159 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":automergeDigest",
+    ":automergeMinor",
+    "group:monorepos",
+    "group:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Asia/Ho_Chi_Minh",
+  "schedule": [
+    "after 10pm every weekday",
+    "before 5am every weekday",
+    "every weekend"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "assignees": [
+    "@taipt1504"
+  ],
+  "reviewers": [
+    "@taipt1504"
+  ],
+  "semanticCommits": "enabled",
+  "prConcurrentLimit": 5,
+  "prCreation": "not-pending",
+  "prHourlyLimit": 2,
+  "rebaseWhen": "behind-base-branch",
+  "platformAutomerge": true,
+  "vulnerabilityAlerts": {
+    "labels": [
+      "security",
+      "dependencies"
+    ],
+    "automerge": true,
+    "schedule": [
+      "at any time"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Automatically merge devDependency updates",
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Automatically merge type definition updates",
+      "matchPackagePatterns": [
+        "^@types/"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "Group ESLint packages",
+      "matchPackagePatterns": [
+        "^eslint",
+        "^@typescript-eslint/"
+      ],
+      "groupName": "eslint packages",
+      "automerge": true
+    },
+    {
+      "description": "Group Vitest packages",
+      "matchPackagePatterns": [
+        "^vitest",
+        "^@vitest/"
+      ],
+      "groupName": "vitest packages",
+      "automerge": true
+    },
+    {
+      "description": "Group TypeScript packages",
+      "matchPackageNames": [
+        "typescript"
+      ],
+      "matchPackagePatterns": [
+        "^@typescript-eslint/"
+      ],
+      "groupName": "typescript packages",
+      "automerge": false,
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Production dependencies - require manual review",
+      "matchDepTypes": [
+        "dependencies"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "production"
+      ]
+    },
+    {
+      "description": "Major version updates - require manual review",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "major-update"
+      ],
+      "reviewers": [
+        "@taipt1504"
+      ]
+    },
+    {
+      "description": "Node.js updates - manual review required",
+      "matchPackageNames": [
+        "node"
+      ],
+      "enabled": true,
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "node"
+      ]
+    },
+    {
+      "description": "GitHub Actions updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "groupName": "GitHub Actions",
+      "pinDigests": true
+    },
+    {
+      "description": "Disable updates for specific packages",
+      "matchPackageNames": [],
+      "enabled": false
+    }
+  ],
+  "postUpdateOptions": [
+    "npmDedupe"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": [
+      "before 5am on monday"
+    ]
+  },
+  "separateMinorPatch": true,
+  "rangeStrategy": "bump"
+}
