@@ -33,19 +33,15 @@ env:
 # TRIGGERS - When to run this workflow
 # ============================================================================
 on:
-  # Trigger on push to main and feature branches
+  # Trigger on push to branches and tags
   push:
     branches:
       - main
       - develop
       - 'feature/**'
       - 'fix/**'
-    paths:
-      - 'src/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig*.json'
-      - '.github/workflows/build.yml'
+    tags:
+      - 'v*.*.*'
 
   # Trigger on pull requests
   pull_request:
@@ -84,11 +80,6 @@ on:
         required: false
         default: false
         type: boolean
-
-  # Trigger on version tags for automatic release
-  push:
-    tags:
-      - 'v*.*.*'
 
   # Optional: Scheduled builds (uncomment to enable)
   # schedule:
