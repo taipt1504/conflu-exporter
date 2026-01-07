@@ -62,7 +62,6 @@ on:
         default: '20'
         type: choice
         options:
-          - '18'
           - '20'
           - '22'
       skip-type-check:
@@ -119,8 +118,8 @@ jobs:
             SKIP_TYPE_CHECK="${{ github.event.inputs.skip-type-check }}"
             UPLOAD_ARTIFACTS="${{ github.event.inputs.upload-artifacts }}"
           else
-            # Default: Build with all supported versions
-            NODE_VERSIONS='["18", "20", "22"]'
+            # Default: Build with LTS versions (Node 18 has compatibility issues with jsdom@27)
+            NODE_VERSIONS='["20", "22"]'
             SKIP_TYPE_CHECK="false"
             UPLOAD_ARTIFACTS="true"
           fi
