@@ -1,0 +1,35 @@
+{
+  "baseUrl": "https://your-domain.atlassian.net",
+  "email": "your-email@example.com",
+  "format": "markdown",
+  "output": "./exports",
+  "includeAttachments": false,
+  "includeChildren": false,
+  "flat": false,
+  "api": {
+    "timeout": 30000,
+    "retries": 3,
+    "concurrency": 5
+  },
+  "conversion": {
+    "markdown": {
+      "frontmatter": true,
+      "preserveHtml": false,
+      "gfm": true
+    },
+    "pdf": {
+      "format": "A4",
+      "includeHeaderFooter": true,
+      "margin": {
+        "top": "20mm",
+        "bottom": "20mm",
+        "left": "15mm",
+        "right": "15mm"
+      }
+    },
+    "docx": {
+      "embedImages": true,
+      "includeMetadata": true
+    }
+  }
+}

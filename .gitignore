@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Configuration (may contain sensitive data)
+.conflurc
+.conflurc.json
+.conflurc.yaml
+.conflurc.yml
+.conflurc.js
+.conflurc.cjs
+conflu.config.js
+conflu.config.cjs
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
