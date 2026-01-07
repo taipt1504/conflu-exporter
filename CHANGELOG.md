@@ -1,5 +1,31 @@
 # Changelog
 
+All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [1.0.0](https://github.com/taipt1504/conflu-exporter/compare/v0.1.0...v1.0.0) (2026-01-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ci:** Removed legacy build.yml workflow in favor of semantic-release workflow
+
+### ✨ Features
+
+* **ci:** add comprehensive workflow automation ([e9dcc55](https://github.com/taipt1504/conflu-exporter/commit/e9dcc553a5442c9cc083087729cc760427fc5902))
+
+
+### 🐛 Bug Fixes
+
+* **deps:** add semantic-release and automation dependencies ([5b02b07](https://github.com/taipt1504/conflu-exporter/commit/5b02b07b90162f1154b4f243be01b7ba144e3629))
+* continue with test error ([3c63fd7](https://github.com/taipt1504/conflu-exporter/commit/3c63fd71ea88e356cc1577e315a6ecab8be8a937))
+
+
+### 📚 Documentation
+
+* add detailed troubleshooting guide for NPM_TOKEN scope issue ([66f1b28](https://github.com/taipt1504/conflu-exporter/commit/66f1b285f9bc96b53086d01e5737736b35776e9c))
+
+# Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
