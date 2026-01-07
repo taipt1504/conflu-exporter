@@ -269,6 +269,10 @@ Comprehensive guides to help you get started and master `conflu-exporter`:
 - **[Use Cases & Examples](docs/USE_CASES.md)** - Real-world scenarios and solutions
 - **[Best Practices](docs/BEST_PRACTICES.md)** - Security, performance, and optimization tips
 
+### Development & Publishing
+
+- **[Auto-Publish Setup](docs/AUTO_PUBLISH_SETUP.md)** - How to set up automatic publishing to npm and GitHub Packages
+  
 ### Quick Links
 
 | I want to... | Go to... |
