@@ -214,12 +214,9 @@ jobs:
             ' CHANGELOG.md)
             
             if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(cat << EOF
-Release version $VERSION
+              CHANGELOG="Release version $VERSION
 
-No changelog entry found. See commits for details.
-EOF
-)
+No changelog entry found."
             fi
           else
             CHANGELOG="Release version $VERSION"
