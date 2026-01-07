@@ -51,7 +51,7 @@
     "html-docx-js-typescript": "^0.1.0",
     "jsdom": "^23.0.0",
     "p-limit": "^5.0.0",
-    "pino": "^8.17.0",
+    "pino": "^10.1.0",
     "pino-pretty": "^10.3.0",
     "puppeteer": "^21.6.0",
     "turndown": "^7.1.0",
