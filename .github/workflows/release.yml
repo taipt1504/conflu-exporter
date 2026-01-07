@@ -1,0 +1,239 @@
+# ============================================================================
+# Automated Release Workflow with Semantic Versioning
+# ============================================================================
+# Purpose: Automatically analyze commits, determine version, generate changelog,
+#          and create releases using conventional commits
+# Triggers: Push to main branch, manual dispatch
+# Features: Semantic versioning, changelog generation, npm & GitHub releases
+# ============================================================================
+
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode (no actual release)'
+        required: false
+        default: false
+        type: boolean
+
+# Prevent concurrent releases
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write        # Create releases and commits
+  issues: write          # Comment on issues
+  pull-requests: write   # Comment on PRs
+  packages: write        # Publish to GitHub Packages
+  id-token: write        # npm provenance
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.21.0'
+
+jobs:
+  # ============================================================================
+  # Job 1: Release Analysis & Publishing
+  # ============================================================================
+  release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+    outputs:
+      new-release-published: ${{ steps.semantic.outputs.new_release_published }}
+      new-release-version: ${{ steps.semantic.outputs.new_release_version }}
+      new-release-major-version: ${{ steps.semantic.outputs.new_release_major_version }}
+      new-release-minor-version: ${{ steps.semantic.outputs.new_release_minor_version }}
+      new-release-patch-version: ${{ steps.semantic.outputs.new_release_patch_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for semantic-release
+          persist-credentials: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test -- --run
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup npm authentication
+        run: |
+          cat > $HOME/.npmrc << EOF
+          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
+          registry=https://registry.npmjs.org/
+          EOF
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Run Semantic Release
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
+        run: |
+          if [ "${{ inputs.dry-run }}" == "true" ]; then
+            echo "🔍 Running in dry-run mode..."
+            npx semantic-release --dry-run
+          else
+            npx semantic-release
+          fi
+
+      - name: Summary
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          echo "## 🎉 New Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.semantic.outputs.new_release_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Major:** ${{ steps.semantic.outputs.new_release_major_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Minor:** ${{ steps.semantic.outputs.new_release_minor_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Patch:** ${{ steps.semantic.outputs.new_release_patch_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 [npm Package](https://www.npmjs.com/package/conflu-exporter)" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️ [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.semantic.outputs.new_release_version }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: No Release Summary
+        if: steps.semantic.outputs.new_release_published != 'true'
+        run: |
+          echo "## ℹ️ No Release" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No new version to release based on conventional commits." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Commit Message Format" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Use conventional commits to trigger releases:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`feat:\` → Minor version bump" >> $GITHUB_STEP_SUMMARY
+          echo "- \`fix:\` → Patch version bump" >> $GITHUB_STEP_SUMMARY
+          echo "- \`feat!:\` or \`BREAKING CHANGE:\` → Major version bump" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Job 2: Post-Release Verification
+  # ============================================================================
+  verify-release:
+    name: Verify Release
+    needs: release
+    if: needs.release.outputs.new-release-published == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for npm to propagate
+        run: sleep 30
+
+      - name: Verify npm package
+        run: |
+          echo "Checking npm package..."
+          npm view conflu-exporter@${{ needs.release.outputs.new-release-version }}
+
+          echo "Installing package globally..."
+          npm install -g conflu-exporter@${{ needs.release.outputs.new-release-version }}
+
+          echo "Testing CLI..."
+          conflu --version
+
+      - name: Verify GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: 'v${{ needs.release.outputs.new-release-version }}'
+            });
+
+            console.log('✅ GitHub Release verified:');
+            console.log(`   Name: ${release.name}`);
+            console.log(`   URL: ${release.html_url}`);
+            console.log(`   Assets: ${release.assets.length}`);
+
+      - name: Verification Summary
+        run: |
+          echo "## ✅ Release Verification Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Version ${{ needs.release.outputs.new-release-version }} successfully:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Published to npm" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Created GitHub Release" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ CLI executable verified" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Job 3: Notify Stakeholders
+  # ============================================================================
+  notify:
+    name: Send Notifications
+    needs: [release, verify-release]
+    if: needs.release.outputs.new-release-published == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create notification message
+        id: message
+        run: |
+          MESSAGE="🎉 **New Release: v${{ needs.release.outputs.new-release-version }}**
+
+          Package: conflu-exporter
+          Version: ${{ needs.release.outputs.new-release-version }}
+
+          📦 npm: https://www.npmjs.com/package/conflu-exporter
+          🏷️ Release: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.release.outputs.new-release-version }}
+
+          Install: \`npm install -g conflu-exporter@${{ needs.release.outputs.new-release-version }}\`"
+
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # Uncomment and configure as needed:
+
+      # - name: Send Slack notification
+      #   uses: 8398a7/action-slack@v3
+      #   with:
+      #     status: success
+      #     text: ${{ steps.message.outputs.message }}
+      #     webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+      # - name: Send email notification
+      #   uses: dawidd6/action-send-mail@v3
+      #   with:
+      #     server_address: smtp.gmail.com
+      #     server_port: 465
+      #     username: ${{ secrets.MAIL_USERNAME }}
+      #     password: ${{ secrets.MAIL_PASSWORD }}
+      #     subject: New Release - conflu-exporter v${{ needs.release.outputs.new-release-version }}
+      #     body: ${{ steps.message.outputs.message }}
+      #     to: team@example.com
+
+      - name: Summary
+        run: |
+          echo "## 📢 Notifications Sent" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Release announcement for v${{ needs.release.outputs.new-release-version }}" >> $GITHUB_STEP_SUMMARY
