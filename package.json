@@ -49,7 +49,7 @@
     "fast-xml-parser": "^4.3.0",
     "fs-extra": "^11.2.0",
     "html-docx-js-typescript": "^0.1.0",
-    "jsdom": "^23.0.0",
+    "jsdom": "^27.4.0",
     "p-limit": "^5.0.0",
     "pino": "^8.17.0",
     "pino-pretty": "^10.3.0",
@@ -61,7 +61,7 @@
   "devDependencies": {
     "@types/cli-progress": "^3.11.5",
     "@types/fs-extra": "^11.0.4",
-    "@types/jsdom": "^21.1.0",
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^20.11.0",
     "@types/turndown": "^5.0.4",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
