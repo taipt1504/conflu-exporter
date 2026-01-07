@@ -1,5 +1,13 @@
 # Confluence Exporter
 
+[![CI](https://github.com/taipt1504/conflu-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/taipt1504/conflu-exporter/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/taipt1504/conflu-exporter/actions/workflows/codeql.yml/badge.svg)](https://github.com/taipt1504/conflu-exporter/actions/workflows/codeql.yml)
+[![npm version](https://img.shields.io/npm/v/conflu-exporter.svg)](https://www.npmjs.com/package/conflu-exporter)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/node/v/conflu-exporter.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![pnpm](https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg)](https://pnpm.io/)
+
 A powerful CLI tool and TypeScript library for exporting Confluence pages and spaces to Markdown format with full fidelity preservation for future sync capabilities.
 
 ## Features
