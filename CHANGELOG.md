@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.0.1](https://github.com/taipt1504/conflu-exporter/compare/v1.0.0...v1.0.1) (2026-01-07)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** capture semantic-release outputs for workflow summary ([2ffdb73](https://github.com/taipt1504/conflu-exporter/commit/2ffdb735e2bf59733cb086a2f87e9dafcbed94bd))
+
 ## [1.0.0](https://github.com/taipt1504/conflu-exporter/compare/v0.1.0...v1.0.0) (2026-01-07)
 
 
