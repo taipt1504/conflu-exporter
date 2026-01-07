@@ -1,0 +1,517 @@
+# ============================================================================
+# Build Package Workflow
+# ============================================================================
+# Purpose: Build and verify package without running tests or linters
+# Triggers: Push, PR, Manual dispatch, Scheduled (optional)
+# Features: Multi-version matrix, caching, artifacts, easy customization
+# ============================================================================
+
+name: Build Package
+
+# ============================================================================
+# CONFIGURATION SECTION - Easy to customize
+# ============================================================================
+env:
+  # Package manager and Node.js versions
+  PNPM_VERSION: 10.21.0
+  NODE_VERSION_DEFAULT: '20'
+  
+  # Build configuration
+  BUILD_OUTPUT_DIR: dist
+  BUILD_TIMEOUT_MINUTES: 10
+  
+  # Artifact configuration
+  ARTIFACT_RETENTION_DAYS: 7
+  ARTIFACT_NAME_PREFIX: build-package
+
+# ============================================================================
+# TRIGGERS - When to run this workflow
+# ============================================================================
+on:
+  # Trigger on push to main and feature branches
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'fix/**'
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig*.json'
+      - '.github/workflows/build.yml'
+
+  # Trigger on pull requests
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig*.json'
+
+  # Manual trigger with options
+  workflow_dispatch:
+    inputs:
+      node-version:
+        description: 'Node.js version to build with'
+        required: false
+        default: '20'
+        type: choice
+        options:
+          - '18'
+          - '20'
+          - '22'
+      skip-type-check:
+        description: 'Skip TypeScript type checking'
+        required: false
+        default: false
+        type: boolean
+      upload-artifacts:
+        description: 'Upload build artifacts'
+        required: false
+        default: true
+        type: boolean
+
+  # Optional: Scheduled builds (uncomment to enable)
+  # schedule:
+  #   # Run every day at 2 AM UTC
+  #   - cron: '0 2 * * *'
+
+# ============================================================================
+# PERMISSIONS - Minimal permissions for security
+# ============================================================================
+permissions:
+  contents: read
+  pull-requests: read
+
+# ============================================================================
+# JOBS
+# ============================================================================
+jobs:
+  # ==========================================================================
+  # JOB 1: Setup and Validation
+  # ==========================================================================
+  setup:
+    name: Setup & Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      node-versions: ${{ steps.config.outputs.node-versions }}
+      skip-type-check: ${{ steps.config.outputs.skip-type-check }}
+      upload-artifacts: ${{ steps.config.outputs.upload-artifacts }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Configure workflow
+        id: config
+        run: |
+          # Determine Node.js versions to build
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            NODE_VERSIONS='["${{ github.event.inputs.node-version }}"]'
+            SKIP_TYPE_CHECK="${{ github.event.inputs.skip-type-check }}"
+            UPLOAD_ARTIFACTS="${{ github.event.inputs.upload-artifacts }}"
+          else
+            # Default: Build with all supported versions
+            NODE_VERSIONS='["18", "20", "22"]'
+            SKIP_TYPE_CHECK="false"
+            UPLOAD_ARTIFACTS="true"
+          fi
+          
+          echo "node-versions=$NODE_VERSIONS" >> $GITHUB_OUTPUT
+          echo "skip-type-check=$SKIP_TYPE_CHECK" >> $GITHUB_OUTPUT
+          echo "upload-artifacts=$UPLOAD_ARTIFACTS" >> $GITHUB_OUTPUT
+          
+          echo "📦 Build configuration:"
+          echo "  Node versions: $NODE_VERSIONS"
+          echo "  Skip type check: $SKIP_TYPE_CHECK"
+          echo "  Upload artifacts: $UPLOAD_ARTIFACTS"
+
+      - name: Validate package.json
+        run: |
+          if [ ! -f "package.json" ]; then
+            echo "❌ package.json not found"
+            exit 1
+          fi
+          
+          # Extract and validate package info
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          
+          echo "✅ Package validation passed"
+          echo "  Name: $PACKAGE_NAME"
+          echo "  Version: $PACKAGE_VERSION"
+
+  # ==========================================================================
+  # JOB 2: Type Check (Optional)
+  # ==========================================================================
+  type-check:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    needs: [setup]
+    if: needs.setup.outputs.skip-type-check == 'false'
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_DEFAULT }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing dependencies..."
+          pnpm install --frozen-lockfile --prefer-offline
+          echo "✅ Dependencies installed"
+
+      - name: Run type check
+        run: |
+          echo "🔍 Running TypeScript type check..."
+          pnpm type-check
+          echo "✅ Type check passed"
+
+  # ==========================================================================
+  # JOB 3: Build Package (Matrix)
+  # ==========================================================================
+  build:
+    name: Build (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    needs: [setup, type-check]
+    if: always() && (needs.type-check.result == 'success' || needs.type-check.result == 'skipped')
+    timeout-minutes: ${{ fromJSON(env.BUILD_TIMEOUT_MINUTES) }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ${{ fromJSON(needs.setup.outputs.node-versions) }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Cache build output
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.BUILD_OUTPUT_DIR }}
+          key: build-${{ runner.os }}-node${{ matrix.node-version }}-${{ hashFiles('src/**', 'package.json', 'tsconfig*.json') }}
+          restore-keys: |
+            build-${{ runner.os }}-node${{ matrix.node-version }}-
+            build-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing dependencies with pnpm..."
+          pnpm install --frozen-lockfile --prefer-offline
+          echo "✅ Dependencies installed successfully"
+
+      - name: Build package
+        id: build
+        run: |
+          echo "🔨 Building package..."
+          echo "  Node.js: $(node --version)"
+          echo "  pnpm: $(pnpm --version)"
+          echo "  TypeScript: $(pnpm list typescript --depth=0 | grep typescript)"
+          echo ""
+          
+          # Run build
+          pnpm build
+          
+          echo ""
+          echo "✅ Build completed successfully"
+
+      - name: Verify build output
+        run: |
+          echo "🔍 Verifying build output..."
+          
+          # Check dist directory exists
+          if [ ! -d "${{ env.BUILD_OUTPUT_DIR }}" ]; then
+            echo "❌ Build output directory not found: ${{ env.BUILD_OUTPUT_DIR }}"
+            exit 1
+          fi
+          
+          # Check essential files
+          ESSENTIAL_FILES=("index.js" "index.d.ts" "exporter.js" "exporter.d.ts")
+          MISSING_FILES=()
+          
+          for file in "${ESSENTIAL_FILES[@]}"; do
+            if [ ! -f "${{ env.BUILD_OUTPUT_DIR }}/$file" ]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          
+          if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+            echo "⚠️  Warning: Some expected files are missing:"
+            printf '  - %s\n' "${MISSING_FILES[@]}"
+          fi
+          
+          # Show build output structure
+          echo ""
+          echo "📦 Build output structure:"
+          ls -lah ${{ env.BUILD_OUTPUT_DIR }}/ || true
+          echo ""
+          
+          # Count files
+          JS_COUNT=$(find ${{ env.BUILD_OUTPUT_DIR }} -name "*.js" | wc -l)
+          DTS_COUNT=$(find ${{ env.BUILD_OUTPUT_DIR }} -name "*.d.ts" | wc -l)
+          MAP_COUNT=$(find ${{ env.BUILD_OUTPUT_DIR }} -name "*.map" | wc -l)
+          
+          echo "📊 Build statistics:"
+          echo "  JavaScript files: $JS_COUNT"
+          echo "  Type definition files: $DTS_COUNT"
+          echo "  Source map files: $MAP_COUNT"
+          
+          # Calculate total size
+          TOTAL_SIZE=$(du -sh ${{ env.BUILD_OUTPUT_DIR }} | cut -f1)
+          echo "  Total size: $TOTAL_SIZE"
+          echo ""
+          
+          echo "✅ Build verification passed"
+
+      - name: Test CLI executable
+        run: |
+          echo "🧪 Testing CLI executable..."
+          
+          if [ ! -f "bin/conflu.js" ]; then
+            echo "❌ CLI executable not found: bin/conflu.js"
+            exit 1
+          fi
+          
+          # Test --version
+          echo "Testing: node bin/conflu.js --version"
+          node bin/conflu.js --version || {
+            echo "❌ CLI version command failed"
+            exit 1
+          }
+          
+          # Test --help
+          echo "Testing: node bin/conflu.js --help"
+          node bin/conflu.js --help > /dev/null || {
+            echo "❌ CLI help command failed"
+            exit 1
+          }
+          
+          echo "✅ CLI executable works correctly"
+
+      - name: Upload build artifacts
+        if: needs.setup.outputs.upload-artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME_PREFIX }}-node${{ matrix.node-version }}-${{ github.sha }}
+          path: |
+            ${{ env.BUILD_OUTPUT_DIR }}/
+            bin/
+            package.json
+            README.md
+            LICENSE
+          retention-days: ${{ fromJSON(env.ARTIFACT_RETENTION_DAYS) }}
+          compression-level: 6
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## 📦 Build Summary (Node ${{ matrix.node-version }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.build.outcome }}" == "success" ]; then
+            echo "✅ **Status:** Build successful" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status:** Build failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Details:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Node.js version: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # JOB 4: Verification (Optional - only on default Node version)
+  # ==========================================================================
+  verify:
+    name: Integration Verification
+    runs-on: ubuntu-latest
+    needs: [setup, build]
+    if: contains(needs.setup.outputs.node-versions, '20')
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_DEFAULT }}
+          cache: 'pnpm'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME_PREFIX }}-node20-${{ github.sha }}
+          path: .
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Verify package structure
+        run: |
+          echo "🔍 Verifying package structure..."
+          
+          # Check package.json exports
+          node -e "
+            const pkg = require('./package.json');
+            console.log('Package name:', pkg.name);
+            console.log('Package version:', pkg.version);
+            console.log('Main entry:', pkg.main);
+            console.log('Types entry:', pkg.types);
+            console.log('Bin entry:', pkg.bin);
+          "
+          
+          echo "✅ Package structure verified"
+
+      - name: Test library imports
+        run: |
+          echo "🧪 Testing library imports..."
+          
+          node -e "
+            const path = require('path');
+            const fs = require('fs');
+            
+            // Test main entry point exists
+            const mainPath = path.resolve('./dist/index.js');
+            if (!fs.existsSync(mainPath)) {
+              console.error('❌ Main entry point not found:', mainPath);
+              process.exit(1);
+            }
+            
+            // Test types entry point exists
+            const typesPath = path.resolve('./dist/index.d.ts');
+            if (!fs.existsSync(typesPath)) {
+              console.error('❌ Types entry point not found:', typesPath);
+              process.exit(1);
+            }
+            
+            console.log('✅ Library entry points verified');
+          "
+
+      - name: Verification summary
+        run: |
+          echo "## ✅ Verification Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All package structure and imports verified successfully." >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # JOB 5: Final Summary
+  # ==========================================================================
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [setup, type-check, build, verify]
+    if: always()
+    
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# 🚀 Build Package Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📋 Workflow Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node versions:** ${{ needs.setup.outputs.node-versions }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📊 Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Setup
+          if [ "${{ needs.setup.result }}" == "success" ]; then
+            echo "✅ **Setup & Validate:** Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Setup & Validate:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Type Check
+          if [ "${{ needs.type-check.result }}" == "success" ]; then
+            echo "✅ **Type Check:** Passed" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.type-check.result }}" == "skipped" ]; then
+            echo "⏭️  **Type Check:** Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Type Check:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Build
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "✅ **Build:** Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Build:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Verify
+          if [ "${{ needs.verify.result }}" == "success" ]; then
+            echo "✅ **Verification:** Passed" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.verify.result }}" == "skipped" ]; then
+            echo "⏭️  **Verification:** Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Verification:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall status
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "## ✅ Overall Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The package has been built successfully and is ready to use." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Overall Status: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The build failed. Please check the logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Generated at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check overall status
+        run: |
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+          
+          echo "✅ All jobs completed successfully"
+

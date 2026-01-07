@@ -1,5 +1,6 @@
 # Confluence Exporter
 
+[![Build](https://github.com/taipt1504/conflu-exporter/actions/workflows/build.yml/badge.svg)](https://github.com/taipt1504/conflu-exporter/actions/workflows/build.yml)
 [![CI](https://github.com/taipt1504/conflu-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/taipt1504/conflu-exporter/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/taipt1504/conflu-exporter/actions/workflows/codeql.yml/badge.svg)](https://github.com/taipt1504/conflu-exporter/actions/workflows/codeql.yml)
 [![npm version](https://img.shields.io/npm/v/conflu-exporter.svg)](https://www.npmjs.com/package/conflu-exporter)
