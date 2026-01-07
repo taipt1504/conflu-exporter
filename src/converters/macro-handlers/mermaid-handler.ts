@@ -17,6 +17,8 @@ export class MermaidHandler {
   private logger = getLogger()
   private macroParser: MacroParser
   private attachmentContentCache: Map<string, string> = new Map()
+  private diagramPlaceholders: Map<string, string> = new Map()
+  private diagramMetadata: Map<string, string> = new Map()
 
   constructor(macroParser: MacroParser) {
     this.macroParser = macroParser
@@ -42,24 +44,32 @@ export class MermaidHandler {
    * Convert Mermaid macros in storage content to markdown code fences
    */
   process(storageContent: string): string {
-    const mermaidMacros = this.macroParser.findMacrosByName(storageContent, 'mermaid')
+    // Support both built-in 'mermaid' macro and 'mermaid-cloud' from Mermaid for Confluence plugin
+    const builtinMacros = this.macroParser.findMacrosByName(storageContent, 'mermaid')
+    const cloudMacros = this.macroParser.findMacrosByName(storageContent, 'mermaid-cloud')
+    const mermaidMacros = [...builtinMacros, ...cloudMacros]
 
     if (mermaidMacros.length === 0) {
+      this.logger.debug('No mermaid or mermaid-cloud macros found')
       return storageContent
     }
 
-    this.logger.info(`Processing ${mermaidMacros.length} Mermaid diagrams...`)
+    this.logger.info(
+      `Processing ${mermaidMacros.length} Mermaid diagrams (${builtinMacros.length} built-in, ${cloudMacros.length} cloud plugin)...`,
+    )
 
     let processedContent = storageContent
 
     for (const macro of mermaidMacros) {
-      const markdown = this.convertToMarkdown(macro)
-      if (markdown) {
-        // Replace the original macro XML with markdown code fence
-        processedContent = processedContent.replace(macro.rawXml, markdown)
+      const html = this.convertToMarkdown(macro)
+      if (html) {
+        // Replace the original macro XML with HTML pre/code block
+        this.logger.debug(`Replacing macro XML (${macro.rawXml.length} chars) with HTML (${html.length} chars)`)
+        processedContent = processedContent.replace(macro.rawXml, html)
       }
     }
 
+    this.logger.debug(`After mermaid processing: ${processedContent.length} chars`)
     return processedContent
   }
 
@@ -70,17 +80,24 @@ export class MermaidHandler {
   private convertToMarkdown(macro: ParsedMacro): string | null {
     let diagramSource = ''
 
+    // Debug: Log macro structure to understand parameters
+    this.logger.debug(`Converting ${macro.name} macro:`)
+    this.logger.debug(`  - Has plain text body: ${this.macroParser.hasPlainTextBody(macro)}`)
+    this.logger.debug(`  - Parameters: ${JSON.stringify(macro.parameters)}`)
+
     // Case 1: Built-in Mermaid macro with plain text body
     if (this.macroParser.hasPlainTextBody(macro) && macro.body) {
       diagramSource = macro.body.trim()
     }
     // Case 2: Mermaid for Confluence plugin - loads from attachment
     else {
-      // Check for attachment parameter (Mermaid for Confluence plugin)
-      const attachmentName = this.macroParser.getMacroParameter(macro, 'attachment')
-      const filename = this.macroParser.getMacroParameter(macro, 'name') || attachmentName
+      // Use getMacroAttachmentReference which checks multiple parameter names
+      // including 'filename' (used by mermaid-cloud), 'attachment', 'name', etc.
+      const filename = this.macroParser.getMacroAttachmentReference(macro)
 
-      if (filename && filename.endsWith('.mmd')) {
+      this.logger.debug(`  - Attachment filename: ${filename || 'N/A'}`)
+
+      if (filename && (filename.endsWith('.mmd') || filename.endsWith('.mermaid'))) {
         // Try to get content from cache
         const cachedContent = this.attachmentContentCache.get(filename)
         if (cachedContent) {
@@ -119,24 +136,75 @@ export class MermaidHandler {
     const width = this.macroParser.getMacroParameter(macro, 'width')
     const height = this.macroParser.getMacroParameter(macro, 'height')
 
-    // Build markdown code fence
-    let markdown = '```mermaid\n'
-    markdown += diagramSource
-    markdown += '\n```'
+    // Use plain text marker as placeholder (not HTML/XML which gets parsed/stripped)
+    // This will survive all processing and be replaced in post-processing
+    const placeholderId = `MERMAID_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    this.diagramPlaceholders.set(placeholderId, diagramSource)
 
-    // Add metadata as HTML comment if parameters exist
+    // Wrap in paragraph to preserve it through HTML processing
+    let placeholder = `<p>___${placeholderId}___</p>`
+
+    // Add metadata if parameters exist
     if (theme || width || height) {
       const metadata = []
       if (theme) metadata.push(`theme: ${theme}`)
       if (width) metadata.push(`width: ${width}`)
       if (height) metadata.push(`height: ${height}`)
 
-      markdown += `\n<!-- Mermaid options: ${metadata.join(', ')} -->`
+      this.diagramMetadata.set(placeholderId, metadata.join(', '))
     }
 
-    this.logger.debug(`Converted Mermaid diagram (${diagramSource.length} chars)`)
+    this.logger.debug(`Created placeholder ${placeholderId} for Mermaid diagram (${diagramSource.length} chars)`)
 
-    return markdown
+    return placeholder
+  }
+
+  /**
+   * Replace placeholders in markdown with actual Mermaid code blocks
+   * Call this AFTER HTML-to-markdown conversion
+   */
+  replacePlaceholders(markdown: string): string {
+    this.logger.debug(`Starting placeholder replacement. Input length: ${markdown.length} chars`)
+    this.logger.debug(`Placeholders to replace: ${this.diagramPlaceholders.size}`)
+
+    let result = markdown
+
+    for (const [placeholderId, diagramSource] of this.diagramPlaceholders.entries()) {
+      // Match the placeholder pattern (with underscores)
+      const placeholderPattern = `___${placeholderId}___`
+
+      // Check if placeholder exists in markdown
+      const exists = result.includes(placeholderPattern)
+      this.logger.debug(`Placeholder ${placeholderId} exists in markdown: ${exists}`)
+
+      if (exists) {
+        // Build markdown code fence
+        let codeBlock = `\n\`\`\`mermaid\n${diagramSource}\n\`\`\`\n`
+
+        // Add metadata if exists
+        if (this.diagramMetadata.has(placeholderId)) {
+          codeBlock += `\n<!-- Mermaid options: ${this.diagramMetadata.get(placeholderId)} -->\n`
+        }
+
+        result = result.replace(placeholderPattern, codeBlock)
+        this.logger.debug(`Replaced placeholder ${placeholderId} with mermaid code block (${codeBlock.length} chars)`)
+      }
+    }
+
+    this.logger.debug(`After replacement. Output length: ${result.length} chars`)
+
+    // Clear placeholders after replacement
+    this.clearPlaceholders()
+
+    return result
+  }
+
+  /**
+   * Clear diagram placeholders and metadata
+   */
+  clearPlaceholders(): void {
+    this.diagramPlaceholders.clear()
+    this.diagramMetadata.clear()
   }
 
   /**

@@ -330,7 +330,8 @@ export class MacroParser {
    */
   getMacroAttachmentReference(macro: ParsedMacro): string | undefined {
     // Check common parameter names for attachment references
-    const attachmentParamNames = ['attachment', 'name', 'file', 'filename', 'src']
+    // Note: 'filename' is used by mermaid-cloud (Mermaid for Confluence plugin)
+    const attachmentParamNames = ['filename', 'attachment', 'name', 'file', 'src']
 
     for (const paramName of attachmentParamNames) {
       const value = this.getMacroParameter(macro, paramName)
@@ -366,10 +367,13 @@ export class MacroParser {
   /**
    * Get all Mermaid attachment references (.mmd files)
    * Returns array of .mmd filenames referenced by mermaid macros
+   * Supports both built-in 'mermaid' and 'mermaid-cloud' (Mermaid for Confluence plugin)
    */
   getMermaidAttachmentReferences(storageContent: string): string[] {
-    const attachments = this.getAllAttachmentReferences(storageContent, 'mermaid')
-    return attachments.filter((filename) => filename.endsWith('.mmd') || filename.endsWith('.mermaid'))
+    const builtinAttachments = this.getAllAttachmentReferences(storageContent, 'mermaid')
+    const cloudAttachments = this.getAllAttachmentReferences(storageContent, 'mermaid-cloud')
+    const allAttachments = [...builtinAttachments, ...cloudAttachments]
+    return allAttachments.filter((filename) => filename.endsWith('.mmd') || filename.endsWith('.mermaid'))
   }
 
   /**
@@ -389,7 +393,7 @@ export class MacroParser {
     const hasAttachment = !!this.getMacroAttachmentReference(macro)
 
     // For macros that typically need content
-    const contentMacros = ['mermaid', 'code', 'html', 'sql', 'xml']
+    const contentMacros = ['mermaid', 'mermaid-cloud', 'code', 'html', 'sql', 'xml']
     if (contentMacros.includes(macro.name) && !hasBody && !hasAttachment) {
       issues.push(`${macro.name} macro has no body content or attachment reference`)
     }
@@ -427,6 +431,7 @@ export class MacroParser {
     // Macro-specific validation
     switch (macro.name) {
       case 'mermaid':
+      case 'mermaid-cloud':
         this.validateMermaidMacro(macro, issues, warnings)
         break
       case 'code':

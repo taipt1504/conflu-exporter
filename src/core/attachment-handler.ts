@@ -48,6 +48,7 @@ interface ConfluenceApiAttachment {
   _links: {
     download: string
     webui?: string
+    self?: string
   }
 }
 
@@ -226,13 +227,22 @@ export class AttachmentHandler {
    * Transform Confluence API attachment to our Attachment format
    */
   private transformAttachment(apiAttachment: ConfluenceApiAttachment): Attachment {
+    const logger = getLogger()
     const baseUrl = this.apiClient.getBaseUrl()
 
-    // Confluence download links are relative, need to add base URL
+    // The _links.download from Confluence API is a relative path
+    // It looks like: /download/attachments/149323923/file.mmd?version=1&...
+    // We need to construct the full URL by prepending baseUrl + /wiki
     let downloadUrl = apiAttachment._links.download
+
     if (!downloadUrl.startsWith('http')) {
-      downloadUrl = `${baseUrl}${downloadUrl}`
+      // Confluence Cloud download paths need /wiki prefix
+      downloadUrl = `${baseUrl}/wiki${downloadUrl}`
     }
+
+    logger.debug(`Attachment: ${apiAttachment.title} (id: ${apiAttachment.id})`)
+    logger.debug(`  - Original _links.download: ${apiAttachment._links.download}`)
+    logger.debug(`  - Constructed download URL: ${downloadUrl}`)
 
     return {
       id: apiAttachment.id,
