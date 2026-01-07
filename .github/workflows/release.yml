@@ -106,9 +106,21 @@ jobs:
         run: |
           if [ "${{ inputs.dry-run }}" == "true" ]; then
             echo "🔍 Running in dry-run mode..."
-            npx semantic-release --dry-run
+            npx semantic-release --dry-run 2>&1 | tee release-output.txt
           else
-            npx semantic-release
+            npx semantic-release 2>&1 | tee release-output.txt
+          fi
+
+          # Capture outputs from semantic-release
+          if grep -q "Published release" release-output.txt; then
+            echo "new_release_published=true" >> $GITHUB_OUTPUT
+            VERSION=$(grep "The next release version is" release-output.txt | sed -E 's/.*is ([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+            echo "new_release_version=$VERSION" >> $GITHUB_OUTPUT
+            echo "new_release_major_version=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
+            echo "new_release_minor_version=$(echo $VERSION | cut -d. -f2)" >> $GITHUB_OUTPUT
+            echo "new_release_patch_version=$(echo $VERSION | cut -d. -f3)" >> $GITHUB_OUTPUT
+          else
+            echo "new_release_published=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Summary
