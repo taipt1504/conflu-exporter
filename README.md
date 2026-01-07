@@ -340,6 +340,20 @@ const safeName = sanitizeFilename('My Page: Title (2024)!')
 const spaceKey = extractSpaceKey('https://example.atlassian.net/wiki/spaces/MYSPACE/pages/123')
 ```
 
+## 📚 Documentation
+
+### CI/CD & Publishing
+
+- [GitHub Actions Build & Publish](docs/AUTO_PUBLISH_SETUP.md) - CI/CD workflow documentation
+- [NPM Token Setup Guide](docs/NPM_TOKEN_SETUP.md) - Complete guide for setting up npm authentication
+- [Token Verification Script](scripts/verify-npm-token.sh) - Test your npm token before publishing
+
+### Quick Help
+
+- **Troubleshooting npm publish errors?** → See [NPM_TOKEN_SETUP.md](docs/NPM_TOKEN_SETUP.md)
+- **Need to verify your token?** → Run `./scripts/verify-npm-token.sh YOUR_TOKEN`
+- **404 or ENEEDAUTH errors?** → Check [Troubleshooting section](docs/NPM_TOKEN_SETUP.md#-troubleshooting)
+
 ## Development
 
 ### Setup
