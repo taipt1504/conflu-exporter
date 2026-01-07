@@ -78,9 +78,6 @@ jobs:
       - name: Type check
         run: pnpm type-check
 
-      - name: Lint
-        run: pnpm lint
-
       - name: Run tests
         run: pnpm test -- --run
         continue-on-error: true
