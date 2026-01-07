@@ -45,6 +45,33 @@ export class HtmlProcessor {
   }
 
   /**
+   * Set Mermaid attachment content before processing
+   * Call this method to cache .mmd file content for attachment-based Mermaid macros
+   */
+  setMermaidAttachmentContent(filename: string, content: string): void {
+    this.mermaidHandler.setAttachmentContent(filename, content)
+    this.logger.debug(`Cached mermaid attachment in HtmlProcessor: ${filename}`)
+  }
+
+  /**
+   * Set multiple Mermaid attachments at once
+   */
+  setMermaidAttachments(attachments: Map<string, string>): void {
+    for (const [filename, content] of attachments) {
+      this.setMermaidAttachmentContent(filename, content)
+    }
+    this.logger.info(`Cached ${attachments.size} mermaid attachment(s)`)
+  }
+
+  /**
+   * Clear all cached mermaid attachments
+   */
+  clearMermaidAttachments(): void {
+    this.mermaidHandler.clearCache()
+    this.logger.debug('Cleared mermaid attachment cache')
+  }
+
+  /**
    * Process page content (storage + view formats)
    * Returns processed HTML ready for conversion
    */

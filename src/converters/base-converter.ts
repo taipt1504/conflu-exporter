@@ -49,6 +49,21 @@ export abstract class BaseConverter {
   abstract getFormatName(): string
 
   /**
+   * Set Mermaid attachment content before processing
+   * Use this to provide .mmd file content for attachment-based Mermaid macros
+   */
+  protected setMermaidAttachments(attachments: Map<string, string>): void {
+    this.htmlProcessor.setMermaidAttachments(attachments)
+  }
+
+  /**
+   * Clear Mermaid attachment cache
+   */
+  protected clearMermaidAttachments(): void {
+    this.htmlProcessor.clearMermaidAttachments()
+  }
+
+  /**
    * Process page content (both storage and view formats)
    */
   protected processContent(page: ConfluencePage) {

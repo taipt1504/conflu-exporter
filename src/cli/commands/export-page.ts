@@ -117,7 +117,18 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
 
     logger.info(chalk.green(`✓ Initialized output directory: ${config.output}`))
 
-    // Step 6: Convert page based on format
+    // Step 6: Download Mermaid attachments (.mmd files) for diagram macros
+    // These must be downloaded BEFORE converting to preserve diagram source code
+    logger.debug('Checking for Mermaid diagram attachments...')
+    const mermaidAttachments = await attachmentHandler.downloadMermaidAttachments(page.id)
+
+    if (mermaidAttachments.size > 0) {
+      logger.info(
+        chalk.green(`✓ Downloaded ${mermaidAttachments.size} Mermaid diagram file(s)`),
+      )
+    }
+
+    // Step 7: Convert page based on format
     logger.info(`Converting page to ${config.format}...`)
 
     let converted: { content: string; metadata: any }
@@ -125,6 +136,14 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
 
     if (config.format === 'markdown') {
       const converter = createMarkdownConverter(config.conversion?.markdown)
+
+      // CRITICAL: Set mermaid attachments BEFORE converting
+      // This allows the converter to extract diagram source code from .mmd files
+      if (mermaidAttachments.size > 0) {
+        converter['setMermaidAttachments'](mermaidAttachments)
+        logger.debug('Cached mermaid attachments in converter')
+      }
+
       converted = await converter.convert(page)
       fileExtension = converter.getFileExtension()
     } else {
@@ -135,7 +154,7 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
 
     logger.info(chalk.green(`✓ Converted to ${config.format} (${converted.content.length} chars)`))
 
-    // Step 7: Save page content
+    // Step 8: Save page content
     const pagePath = await directoryManager.getPageFilePath(
       page.spaceKey,
       page.title,
@@ -146,7 +165,7 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
 
     logger.info(chalk.green(`✓ Saved page: ${pagePath}`))
 
-    // Step 8: Download attachments if requested
+    // Step 9: Download attachments if requested
     if (config.includeAttachments) {
       logger.info('Downloading attachments...')
 
@@ -169,7 +188,7 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
       }
     }
 
-    // Step 9: Save manifest
+    // Step 10: Save manifest
     const manifest = {
       exportedAt: new Date().toISOString(),
       tool: 'conflu-exporter',
@@ -191,7 +210,7 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
 
     logger.info(chalk.green(`✓ Saved manifest: ${manifestPath}`))
 
-    // Step 10: Success summary
+    // Step 11: Success summary
     logger.info(chalk.green.bold('\n✓ Export complete!'))
     logger.info(`\nExported files:`)
     logger.info(`  Page: ${chalk.cyan(pagePath)}`)
