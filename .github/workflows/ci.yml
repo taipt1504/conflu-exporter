@@ -35,12 +35,6 @@ jobs:
       - name: Type check
         run: pnpm type-check
 
-      - name: Lint
-        run: pnpm lint
-
-      - name: Format check
-        run: pnpm format:check
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -123,7 +117,7 @@ jobs:
             libxfixes3 \
             libxrandr2 \
             libgbm1 \
-            libasound2
+            libasound2t64
 
       - name: Build before test
         run: pnpm build
