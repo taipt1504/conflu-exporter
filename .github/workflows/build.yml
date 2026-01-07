@@ -526,9 +526,15 @@ jobs:
       - name: Setup npm authentication
         run: |
           echo "🔐 Setting up npm authentication..."
-          # Create .npmrc in home directory
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > $HOME/.npmrc
+          # Create .npmrc in home directory for npm to read
+          cat > $HOME/.npmrc << EOF
+          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
+          registry=https://registry.npmjs.org/
+          EOF
           echo "✅ .npmrc configured at $HOME/.npmrc"
+          
+          # Verify npm can authenticate
+          npm whoami || echo "⚠️ npm authentication may have issues"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -538,9 +544,9 @@ jobs:
           echo "📦 Publishing to npm..."
           echo "  Package: $(node -p "require('./package.json').name")"
           echo "  Version: $(node -p "require('./package.json').version")"
-          echo "  Registry: ${{ env.NPM_REGISTRY }}"
+          echo "  Registry: https://registry.npmjs.org/"
           
-          # Use npm publish directly (more reliable than pnpm for publishing)
+          # Use npm publish directly (more reliable than pnpm)
           npm publish --access public
         continue-on-error: true
 
