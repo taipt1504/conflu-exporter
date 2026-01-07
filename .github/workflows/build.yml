@@ -194,7 +194,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup, type-check]
     if: always() && (needs.type-check.result == 'success' || needs.type-check.result == 'skipped')
-    timeout-minutes: ${{ fromJSON(env.BUILD_TIMEOUT_MINUTES) }}
+    timeout-minutes: 10
     
     strategy:
       fail-fast: false
@@ -330,7 +330,7 @@ jobs:
             package.json
             README.md
             LICENSE
-          retention-days: ${{ fromJSON(env.ARTIFACT_RETENTION_DAYS) }}
+          retention-days: 7
           compression-level: 6
 
       - name: Build summary
