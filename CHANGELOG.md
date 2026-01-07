@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.1.0](https://github.com/taipt1504/conflu-exporter/compare/v1.0.1...v1.1.0) (2026-01-07)
+
+
+### ✨ Features
+
+* complete mermaid diagram source extraction to markdown ([99e6878](https://github.com/taipt1504/conflu-exporter/commit/99e687831735708e40d51d2b19b9d9c591491223))
+* **macros:** enhance macro parsing with attachment support and validation ([fb362de](https://github.com/taipt1504/conflu-exporter/commit/fb362deb3f0501df457190209453e698d32ca887))
+* support Mermaid for Confluence plugin text/plain attachments ([502478e](https://github.com/taipt1504/conflu-exporter/commit/502478e4fc829ce2f4a6ff2551c8f52f4128f529))
+
+
+### 🐛 Bug Fixes
+
+* confluence cloud attachment downloads and mermaid macro support ([61437e5](https://github.com/taipt1504/conflu-exporter/commit/61437e5eccdcd0116313c8d9bda3e57dd6d463eb))
+
 ## [1.0.1](https://github.com/taipt1504/conflu-exporter/compare/v1.0.0...v1.0.1) (2026-01-07)
 
 
