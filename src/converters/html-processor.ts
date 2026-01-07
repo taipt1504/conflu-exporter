@@ -329,12 +329,19 @@ export class HtmlProcessor {
     // For now, use processed storage content as primary
     // View content is used as fallback for content without macros
 
-    // Check if storage has been processed (contains markdown code fences)
-    if (storageContent.includes('```mermaid') || storageContent.includes('```')) {
+    // Check if storage has been processed (contains placeholders or markdown code fences)
+    if (
+      storageContent.includes('MERMAID_PLACEHOLDER_') ||
+      storageContent.includes('data-mermaid-placeholder') ||
+      storageContent.includes('```mermaid') ||
+      storageContent.includes('```')
+    ) {
+      this.logger.debug('Using processed storage content (contains macro placeholders)')
       return storageContent
     }
 
     // Otherwise use view content
+    this.logger.debug('Using view content (no macro placeholders in storage)')
     return viewContent
   }
 

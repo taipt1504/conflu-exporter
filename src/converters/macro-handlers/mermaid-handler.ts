@@ -136,13 +136,13 @@ export class MermaidHandler {
     const width = this.macroParser.getMacroParameter(macro, 'width')
     const height = this.macroParser.getMacroParameter(macro, 'height')
 
-    // Use plain text marker as placeholder (not HTML/XML which gets parsed/stripped)
-    // This will survive all processing and be replaced in post-processing
+    // Use code tag with special marker - Turndown preserves code elements better
     const placeholderId = `MERMAID_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     this.diagramPlaceholders.set(placeholderId, diagramSource)
 
-    // Wrap in paragraph to preserve it through HTML processing
-    let placeholder = `<p>___${placeholderId}___</p>`
+    // Wrap in code tag to ensure Turndown preserves it
+    // Format: <code data-mermaid-placeholder="ID">PLACEHOLDER_TEXT</code>
+    let placeholder = `<code data-mermaid-placeholder="${placeholderId}">MERMAID_PLACEHOLDER_${placeholderId}</code>`
 
     // Add metadata if parameters exist
     if (theme || width || height) {
@@ -170,24 +170,28 @@ export class MermaidHandler {
     let result = markdown
 
     for (const [placeholderId, diagramSource] of this.diagramPlaceholders.entries()) {
-      // Match the placeholder pattern (with underscores)
-      const placeholderPattern = `___${placeholderId}___`
+      // Build markdown code fence
+      let codeBlock = `\n\`\`\`mermaid\n${diagramSource}\n\`\`\`\n`
 
-      // Check if placeholder exists in markdown
-      const exists = result.includes(placeholderPattern)
-      this.logger.debug(`Placeholder ${placeholderId} exists in markdown: ${exists}`)
+      // Add metadata if exists
+      if (this.diagramMetadata.has(placeholderId)) {
+        codeBlock += `\n<!-- Mermaid options: ${this.diagramMetadata.get(placeholderId)} -->\n`
+      }
 
-      if (exists) {
-        // Build markdown code fence
-        let codeBlock = `\n\`\`\`mermaid\n${diagramSource}\n\`\`\`\n`
+      // Match the placeholder text (Turndown converts <code> to backticks)
+      // Pattern: `MERMAID_PLACEHOLDER_${placeholderId}`
+      const placeholderText = `MERMAID_PLACEHOLDER_${placeholderId}`
+      const backtickPattern = `\`${placeholderText}\``
 
-        // Add metadata if exists
-        if (this.diagramMetadata.has(placeholderId)) {
-          codeBlock += `\n<!-- Mermaid options: ${this.diagramMetadata.get(placeholderId)} -->\n`
-        }
-
-        result = result.replace(placeholderPattern, codeBlock)
-        this.logger.debug(`Replaced placeholder ${placeholderId} with mermaid code block (${codeBlock.length} chars)`)
+      if (result.includes(backtickPattern)) {
+        result = result.replace(backtickPattern, codeBlock)
+        this.logger.debug(`Replaced placeholder ${placeholderId.substring(0, 30)}... with mermaid code block`)
+      } else if (result.includes(placeholderText)) {
+        // Fallback without backticks
+        result = result.replace(placeholderText, codeBlock)
+        this.logger.debug(`Replaced plain placeholder ${placeholderId.substring(0, 30)}... with mermaid code block`)
+      } else {
+        this.logger.warn(`Placeholder ${placeholderId.substring(0, 30)}... not found in markdown (searched for: ${backtickPattern})`)
       }
     }
 

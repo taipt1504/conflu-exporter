@@ -242,16 +242,8 @@ export class MarkdownConverter extends BaseConverter {
     // Process content (storage + view)
     const processed = this.processContent(page)
 
-    // Debug: Check if placeholders exist in processed HTML
-    const htmlPlaceholderCount = (processed.html.match(/___MERMAID_/g) || []).length
-    this.logger.debug(`Processed HTML contains ${htmlPlaceholderCount} mermaid placeholder markers`)
-
     // Convert HTML to Markdown
     let markdown = this.turndownService.turndown(processed.html)
-
-    // Debug: Check if placeholders exist in turndown output
-    const mdPlaceholderCount = (markdown.match(/___MERMAID_/g) || []).length
-    this.logger.debug(`Turndown output contains ${mdPlaceholderCount} mermaid placeholder markers`)
 
     // Replace mermaid placeholders with actual code blocks (CRITICAL: Must be done AFTER Turndown)
     markdown = this.htmlProcessor['mermaidHandler'].replacePlaceholders(markdown)
