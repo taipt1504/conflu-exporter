@@ -1,8 +1,8 @@
 import { JSDOM } from 'jsdom'
 import { getLogger } from '../cli/ui/logger.js'
 import { MacroParser, ParsedImage, ParsedLink } from './macro-parser.js'
+import { MermaidProcessor } from './macro-handlers/mermaid/mermaid-processor.js'
 import {
-  MermaidHandler,
   CodeHandler,
   DiagramHandler,
   ContentHandler,
@@ -31,14 +31,14 @@ export interface ProcessedContent {
 export class HtmlProcessor {
   private logger = getLogger()
   private macroParser: MacroParser
-  private mermaidHandler: MermaidHandler
+  private mermaidProcessor: MermaidProcessor
   private codeHandler: CodeHandler
   private diagramHandler: DiagramHandler
   private contentHandler: ContentHandler
 
   constructor() {
     this.macroParser = new MacroParser()
-    this.mermaidHandler = new MermaidHandler(this.macroParser)
+    this.mermaidProcessor = new MermaidProcessor(this.macroParser)
     this.codeHandler = new CodeHandler(this.macroParser)
     this.diagramHandler = new DiagramHandler(this.macroParser)
     this.contentHandler = new ContentHandler(this.macroParser)
@@ -49,7 +49,7 @@ export class HtmlProcessor {
    * Call this method to cache .mmd file content for attachment-based Mermaid macros
    */
   setMermaidAttachmentContent(filename: string, content: string): void {
-    this.mermaidHandler.setAttachmentContent(filename, content)
+    this.mermaidProcessor.setAttachmentContent(filename, content)
     this.logger.debug(`Cached mermaid attachment in HtmlProcessor: ${filename}`)
   }
 
@@ -67,15 +67,23 @@ export class HtmlProcessor {
    * Clear all cached mermaid attachments
    */
   clearMermaidAttachments(): void {
-    this.mermaidHandler.clearCache()
+    this.mermaidProcessor.clearCache()
     this.logger.debug('Cleared mermaid attachment cache')
+  }
+
+  /**
+   * Replace Mermaid placeholders in markdown with actual code blocks
+   * Call this after converting HTML to Markdown
+   */
+  replaceMermaidPlaceholders(markdown: string): string {
+    return this.mermaidProcessor.replacePlaceholders(markdown)
   }
 
   /**
    * Process page content (storage + view formats)
    * Returns processed HTML ready for conversion
    */
-  process(storageContent: string, viewContent: string): ProcessedContent {
+  async process(storageContent: string, viewContent: string): Promise<ProcessedContent> {
     this.logger.info('Processing page content with macro extraction...')
 
     // Default fallback result
@@ -99,7 +107,7 @@ export class HtmlProcessor {
 
     try {
       // Step 1: Process storage format to extract macros
-      const processedStorage = this.processStorageFormat(storageContent || '')
+      const processedStorage = await this.processStorageFormat(storageContent || '')
 
       // Step 2: Process view format for display content
       const processedView = this.processViewFormat(viewContent || '')
@@ -168,7 +176,7 @@ export class HtmlProcessor {
    * Process storage format to extract macro source code
    * CRITICAL: This preserves diagram source code, not just rendered output
    */
-  private processStorageFormat(storageContent: string): string {
+  private async processStorageFormat(storageContent: string): Promise<string> {
     if (!storageContent) {
       return ''
     }
@@ -178,7 +186,7 @@ export class HtmlProcessor {
     // Process in order of priority with defensive error handling
     // 1. Mermaid diagrams (CRITICAL - extract source code)
     try {
-      processed = this.mermaidHandler.process(processed)
+      processed = await this.mermaidProcessor.process(processed)
     } catch (error) {
       this.logger.debug('Mermaid processing failed, continuing with original content')
     }

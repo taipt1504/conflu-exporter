@@ -240,13 +240,13 @@ export class MarkdownConverter extends BaseConverter {
     this.logger.info(`Converting page ${page.id} to Markdown...`)
 
     // Process content (storage + view)
-    const processed = this.processContent(page)
+    const processed = await this.processContent(page)
 
     // Convert HTML to Markdown
     let markdown = this.turndownService.turndown(processed.html)
 
     // Replace mermaid placeholders with actual code blocks (CRITICAL: Must be done AFTER Turndown)
-    markdown = this.htmlProcessor['mermaidHandler'].replacePlaceholders(markdown)
+    markdown = this.htmlProcessor.replaceMermaidPlaceholders(markdown)
 
     // Add frontmatter if enabled
     if (this.options.frontmatter) {

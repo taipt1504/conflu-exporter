@@ -1,5 +1,5 @@
 import { ConfluencePage } from '../types.js'
-import { HtmlProcessor } from './html-processor.js'
+import { HtmlProcessor, ProcessedContent } from './html-processor.js'
 import { getLogger } from '../cli/ui/logger.js'
 
 export interface ConvertOptions {
@@ -66,10 +66,10 @@ export abstract class BaseConverter {
   /**
    * Process page content (both storage and view formats)
    */
-  protected processContent(page: ConfluencePage) {
+  protected async processContent(page: ConfluencePage): Promise<ProcessedContent> {
     this.logger.debug(`Processing content for page ${page.id}...`)
 
-    return this.htmlProcessor.process(page.content.storage, page.content.view)
+    return await this.htmlProcessor.process(page.content.storage, page.content.view)
   }
 
   /**
