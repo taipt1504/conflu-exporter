@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.3.1](https://github.com/taipt1504/conflu-exporter/compare/v1.3.0...v1.3.1) (2026-01-08)
+
+
+### 🐛 Bug Fixes
+
+* Merge images from view content when storage has macros ([7a85243](https://github.com/taipt1504/conflu-exporter/commit/7a852435988f6f6fcc07052ebbbdab90f730a49e))
+
 ## [1.3.0](https://github.com/taipt1504/conflu-exporter/compare/v1.2.0...v1.3.0) (2026-01-08)
 
 
