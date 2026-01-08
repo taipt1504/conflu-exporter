@@ -25,6 +25,55 @@ export class MermaidHandler {
   }
 
   /**
+   * Decode HTML entities in filename
+   * Confluence macro parameters may contain HTML entities like &uacute; for ú
+   */
+  private decodeHtmlEntities(text: string): string {
+    const entities: Record<string, string> = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&apos;': "'",
+      '&nbsp;': ' ',
+      // Vietnamese characters
+      '&aacute;': 'á',
+      '&agrave;': 'à',
+      '&atilde;': 'ã',
+      '&acirc;': 'â',
+      '&eacute;': 'é',
+      '&egrave;': 'è',
+      '&ecute;': 'ẽ',
+      '&ecirc;': 'ê',
+      '&iacute;': 'í',
+      '&igrave;': 'ì',
+      '&itilde;': 'ĩ',
+      '&oacute;': 'ó',
+      '&ograve;': 'ò',
+      '&otilde;': 'õ',
+      '&ocirc;': 'ô',
+      '&uacute;': 'ú',
+      '&ugrave;': 'ù',
+      '&utilde;': 'ũ',
+      '&yacute;': 'ý',
+      '&ygrave;': 'ỳ',
+      '&ytilde;': 'ỹ',
+    }
+
+    let decoded = text
+    for (const [entity, char] of Object.entries(entities)) {
+      decoded = decoded.replace(new RegExp(entity, 'g'), char)
+    }
+
+    // Decode numeric entities (e.g., &#250; for ú)
+    decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)))
+    decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+
+    return decoded
+  }
+
+  /**
    * Set attachment content for mermaid files (.mmd)
    * Called by content fetcher when downloading attachments
    */
@@ -44,18 +93,22 @@ export class MermaidHandler {
    * Convert Mermaid macros in storage content to markdown code fences
    */
   process(storageContent: string): string {
-    // Support both built-in 'mermaid' macro and 'mermaid-cloud' from Mermaid for Confluence plugin
+    // Support all known Mermaid macro variants:
+    // 1. 'mermaid' - Built-in Confluence macro
+    // 2. 'mermaid-cloud' - Mermaid for Confluence plugin (newer version)
+    // 3. 'mermaid-macro' - Mermaid for Confluence plugin (older version)
     const builtinMacros = this.macroParser.findMacrosByName(storageContent, 'mermaid')
     const cloudMacros = this.macroParser.findMacrosByName(storageContent, 'mermaid-cloud')
-    const mermaidMacros = [...builtinMacros, ...cloudMacros]
+    const oldMacros = this.macroParser.findMacrosByName(storageContent, 'mermaid-macro')
+    const mermaidMacros = [...builtinMacros, ...cloudMacros, ...oldMacros]
 
     if (mermaidMacros.length === 0) {
-      this.logger.debug('No mermaid or mermaid-cloud macros found')
+      this.logger.debug('No mermaid macros found')
       return storageContent
     }
 
     this.logger.info(
-      `Processing ${mermaidMacros.length} Mermaid diagrams (${builtinMacros.length} built-in, ${cloudMacros.length} cloud plugin)...`,
+      `Processing ${mermaidMacros.length} Mermaid diagrams (${builtinMacros.length} built-in, ${cloudMacros.length + oldMacros.length} plugin)...`,
     )
 
     let processedContent = storageContent
@@ -64,12 +117,52 @@ export class MermaidHandler {
       const html = this.convertToMarkdown(macro)
       if (html) {
         // Replace the original macro XML with HTML pre/code block
-        this.logger.debug(`Replacing macro XML (${macro.rawXml.length} chars) with HTML (${html.length} chars)`)
-        processedContent = processedContent.replace(macro.rawXml, html)
+        this.logger.debug(`Replacing macro XML (${macro.rawXml.length} chars) with placeholder HTML (${html.length} chars)`)
+
+        // Check if macro XML exists in content before replacing
+        // Note: JSDOM decodes HTML entities (e.g., &eacute; -> é) in element.outerHTML,
+        // but the storage content still has encoded entities. We need to handle both.
+        let replaced = false
+
+        if (processedContent.includes(macro.rawXml)) {
+          processedContent = processedContent.replace(macro.rawXml, html)
+          replaced = true
+          this.logger.debug(`Successfully replaced macro XML (exact match)`)
+        } else {
+          // Try to find and replace by macro ID (which is unique and doesn't have HTML entities)
+          const macroIdMatch = macro.rawXml.match(/ac:macro-id="([^"]+)"/)
+          if (macroIdMatch) {
+            const macroId = macroIdMatch[1]
+            // Find the macro in content by its ID
+            const macroStart = processedContent.indexOf(`ac:macro-id="${macroId}"`)
+            if (macroStart >= 0) {
+              // Search backward to find the opening tag
+              const beforeMacroId = processedContent.substring(0, macroStart)
+              const tagStart = beforeMacroId.lastIndexOf('<ac:structured-macro')
+              if (tagStart >= 0) {
+                // Search forward to find the closing tag
+                const afterTagStart = processedContent.substring(tagStart)
+                const tagEnd = afterTagStart.indexOf('</ac:structured-macro>') + '</ac:structured-macro>'.length
+                if (tagEnd > 0) {
+                  const originalMacroXml = afterTagStart.substring(0, tagEnd)
+                  processedContent = processedContent.replace(originalMacroXml, html)
+                  replaced = true
+                  this.logger.debug(`Successfully replaced macro XML (by macro ID)`)
+                }
+              }
+            }
+          }
+        }
+
+        if (!replaced) {
+          this.logger.warn(`Macro XML not found in content! Macro ID: ${macro.rawXml.match(/ac:macro-id="([^"]+)"/)?.[1]}`)
+        }
       }
     }
 
     this.logger.debug(`After mermaid processing: ${processedContent.length} chars`)
+    this.logger.debug(`Processed content contains data-mermaid-placeholder: ${processedContent.includes('data-mermaid-placeholder')}`)
+    this.logger.debug(`Count of data-mermaid-placeholder: ${(processedContent.match(/data-mermaid-placeholder/g) || []).length}`)
     return processedContent
   }
 
@@ -95,22 +188,28 @@ export class MermaidHandler {
       // including 'filename' (used by mermaid-cloud), 'attachment', 'name', etc.
       const filename = this.macroParser.getMacroAttachmentReference(macro)
 
-      this.logger.debug(`  - Attachment filename: ${filename || 'N/A'}`)
+      this.logger.debug(`  - Attachment filename from macro: ${filename || 'N/A'}`)
 
       if (filename) {
         // Try to get content from cache
         // Note: Mermaid for Confluence plugin stores diagrams as text/plain attachments
         // with just the diagram name (no extension), e.g., "NHLAD" instead of "NHLAD.mmd"
-        const cachedContent = this.attachmentContentCache.get(filename)
+
+        // IMPORTANT: Macro parameters may contain HTML entities (e.g., "luồng r&uacute;t tiền")
+        // We need to decode them before looking up in cache
+        const decodedFilename = this.decodeHtmlEntities(filename)
+        this.logger.debug(`  - Decoded filename: ${decodedFilename}`)
+
+        const cachedContent = this.attachmentContentCache.get(decodedFilename)
         if (cachedContent) {
           diagramSource = cachedContent.trim()
           this.logger.debug(
-            `Using cached mermaid content from attachment: ${filename} (${diagramSource.length} chars)`,
+            `Using cached mermaid content from attachment: ${decodedFilename} (${diagramSource.length} chars)`,
           )
         } else {
           this.logger.warn(
-            `Mermaid attachment ${filename} not found in cache. ` +
-              `Make sure to download attachments first. Available files: ${Array.from(this.attachmentContentCache.keys()).join(', ')}`,
+            `Mermaid attachment ${decodedFilename} not found in cache. ` +
+              `Original filename: ${filename}. Available files: ${Array.from(this.attachmentContentCache.keys()).join(', ')}`,
           )
           // Return placeholder with instruction
           return (

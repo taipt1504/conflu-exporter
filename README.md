@@ -1,8 +1,5 @@
 # Confluence Exporter
 
-[![Build](https://github.com/taipt1504/conflu-exporter/actions/workflows/build.yml/badge.svg)](https://github.com/taipt1504/conflu-exporter/actions/workflows/build.yml)
-[![CI](https://github.com/taipt1504/conflu-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/taipt1504/conflu-exporter/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/taipt1504/conflu-exporter/actions/workflows/codeql.yml/badge.svg)](https://github.com/taipt1504/conflu-exporter/actions/workflows/codeql.yml)
 [![npm version](https://img.shields.io/npm/v/conflu-exporter.svg)](https://www.npmjs.com/package/conflu-exporter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/node/v/conflu-exporter.svg)](https://nodejs.org)
@@ -52,6 +49,7 @@ yarn add conflu-exporter
 You can authenticate in three ways (priority: CLI flags → Environment variables → Config file):
 
 **Environment Variables** (Recommended):
+
 ```bash
 export CONFLUENCE_BASE_URL="https://your-domain.atlassian.net"
 export CONFLUENCE_EMAIL="your-email@example.com"
@@ -59,6 +57,7 @@ export CONFLUENCE_TOKEN="your-api-token"
 ```
 
 **Config File** (`.conflurc`):
+
 ```json
 {
   "baseUrl": "https://your-domain.atlassian.net",
@@ -70,6 +69,7 @@ export CONFLUENCE_TOKEN="your-api-token"
 ```
 
 **CLI Flags**:
+
 ```bash
 conflu export page 123456 -e your-email@example.com -t your-token -u https://your-domain.atlassian.net
 ```
@@ -123,6 +123,7 @@ conflu export url "https://your-domain.atlassian.net/wiki/spaces/TEAM/overview"
 Export multiple pages from a JSON or CSV file:
 
 **JSON Format** (`batch-export.json`):
+
 ```json
 [
   {
@@ -140,6 +141,7 @@ Export multiple pages from a JSON or CSV file:
 ```
 
 **CSV Format** (`batch-export.csv`):
+
 ```csv
 pageId,title
 123456,Product Requirements
@@ -148,6 +150,7 @@ pageId,title
 ```
 
 **Run Batch Export**:
+
 ```bash
 # From JSON file
 conflu export batch examples/batch-export.json
@@ -192,6 +195,7 @@ exports/
 **Mermaid Diagrams**: The tool automatically extracts Mermaid diagram source code and exports it as markdown code fences:
 
 **Confluence Page**:
+
 ```
 {mermaid}
 graph TD
@@ -201,6 +205,7 @@ graph TD
 ```
 
 **Exported Markdown**:
+
 ````markdown
 ```mermaid
 graph TD
@@ -217,23 +222,24 @@ Each exported page includes comprehensive frontmatter metadata:
 
 ```yaml
 ---
-title: "Page Title"
-confluenceId: "123456"
-confluenceSpaceKey: "TEAM"
+title: 'Page Title'
+confluenceId: '123456'
+confluenceSpaceKey: 'TEAM'
 confluenceVersion: 5
-confluenceCreatedBy: "user@example.com"
-confluenceCreatedAt: "2025-01-01T10:00:00Z"
-confluenceUpdatedAt: "2026-01-07T12:00:00Z"
-confluenceParentId: "789012"
-confluenceLabels: ["documentation", "api"]
+confluenceCreatedBy: 'user@example.com'
+confluenceCreatedAt: '2025-01-01T10:00:00Z'
+confluenceUpdatedAt: '2026-01-07T12:00:00Z'
+confluenceParentId: '789012'
+confluenceLabels: ['documentation', 'api']
 macros:
   mermaid: 2
   code: 5
-exportedAt: "2026-01-07T14:30:00Z"
+exportedAt: '2026-01-07T14:30:00Z'
 ---
 ```
 
 This metadata enables:
+
 - **Change detection** for incremental updates
 - **Bidirectional sync** compatibility
 - **Page relationship** preservation
@@ -272,19 +278,19 @@ Comprehensive guides to help you get started and master `conflu-exporter`:
 ### Development & Publishing
 
 - **[Auto-Publish Setup](docs/AUTO_PUBLISH_SETUP.md)** - How to set up automatic publishing to npm and GitHub Packages
-  
+
 ### Quick Links
 
-| I want to... | Go to... |
-|--------------|----------|
-| Install the tool | [Installation Guide](docs/INSTALLATION.md) |
-| Export my first page | [Quick Start](docs/QUICK_START.md#step-4-your-first-export) |
-| Set up authentication | [Authentication Guide](docs/AUTHENTICATION.md) |
-| Export an entire space | [Command Reference - export space](docs/COMMAND_REFERENCE.md#export-space) |
-| Batch export multiple pages | [Command Reference - export batch](docs/COMMAND_REFERENCE.md#export-batch) |
-| Fix an error | [Troubleshooting Guide](docs/TROUBLESHOOTING.md) |
-| Automate exports | [Use Cases - CI/CD Integration](docs/USE_CASES.md#cicd-integration) |
-| Optimize performance | [Best Practices - Performance](docs/BEST_PRACTICES.md#performance-optimization) |
+| I want to...                | Go to...                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| Install the tool            | [Installation Guide](docs/INSTALLATION.md)                                      |
+| Export my first page        | [Quick Start](docs/QUICK_START.md#step-4-your-first-export)                     |
+| Set up authentication       | [Authentication Guide](docs/AUTHENTICATION.md)                                  |
+| Export an entire space      | [Command Reference - export space](docs/COMMAND_REFERENCE.md#export-space)      |
+| Batch export multiple pages | [Command Reference - export batch](docs/COMMAND_REFERENCE.md#export-batch)      |
+| Fix an error                | [Troubleshooting Guide](docs/TROUBLESHOOTING.md)                                |
+| Automate exports            | [Use Cases - CI/CD Integration](docs/USE_CASES.md#cicd-integration)             |
+| Optimize performance        | [Best Practices - Performance](docs/BEST_PRACTICES.md#performance-optimization) |
 
 ## Library Usage
 
