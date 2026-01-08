@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.3.0](https://github.com/taipt1504/conflu-exporter/compare/v1.2.0...v1.3.0) (2026-01-08)
+
+
+### ✨ Features
+
+* Implement automatic image/attachment download during export ([cabe22c](https://github.com/taipt1504/conflu-exporter/commit/cabe22c7802d0b8b0f782b2f93aae0d2342563f4))
+
+
+### 🐛 Bug Fixes
+
+* Wrap image and attachment URLs in angle brackets for proper rendering ([bc6dfe4](https://github.com/taipt1504/conflu-exporter/commit/bc6dfe4aba8ac2b38d84723cea4ecded55befaac))
+
 ## [1.2.0](https://github.com/taipt1504/conflu-exporter/compare/v1.1.0...v1.2.0) (2026-01-08)
 
 
