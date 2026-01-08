@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.2.0](https://github.com/taipt1504/conflu-exporter/compare/v1.1.0...v1.2.0) (2026-01-08)
+
+
+### ✨ Features
+
+* support all Mermaid macro variants and fix HTML entity handling ([4d6d9cf](https://github.com/taipt1504/conflu-exporter/commit/4d6d9cf3480deb678bf059965888e235a8f16501))
+
 ## [1.1.0](https://github.com/taipt1504/conflu-exporter/compare/v1.0.1...v1.1.0) (2026-01-07)
 
 
