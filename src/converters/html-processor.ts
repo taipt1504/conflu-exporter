@@ -332,25 +332,291 @@ export class HtmlProcessor {
   /**
    * Merge storage and view content
    * Prioritize storage for macros, view for general content
+   *
+   * CRITICAL: When storage has macros (Mermaid, code blocks), we must ALSO
+   * preserve images from view content since:
+   * - Storage format uses <ac:image> tags (Confluence XML)
+   * - View format has <img> tags that Turndown converts to markdown
+   * - Without merging, images in view-only content are lost
    */
   private mergeContent(storageContent: string, viewContent: string): string {
-    // For now, use processed storage content as primary
-    // View content is used as fallback for content without macros
-
     // Check if storage has been processed (contains placeholders or markdown code fences)
-    if (
+    const hasMacros =
       storageContent.includes('MERMAID_PLACEHOLDER_') ||
       storageContent.includes('data-mermaid-placeholder') ||
       storageContent.includes('```mermaid') ||
       storageContent.includes('```')
-    ) {
-      this.logger.debug('Using processed storage content (contains macro placeholders)')
+
+    if (!hasMacros) {
+      // No macros in storage, use view content as primary
+      this.logger.debug('Using view content (no macro placeholders in storage)')
+      return viewContent
+    }
+
+    this.logger.debug('Storage has macros, merging with view content for images...')
+
+    // Extract images from view content
+    const viewImages = this.extractImagesFromHtml(viewContent)
+
+    if (viewImages.length === 0) {
+      this.logger.debug('No images in view content, using storage only')
       return storageContent
     }
 
-    // Otherwise use view content
-    this.logger.debug('Using view content (no macro placeholders in storage)')
-    return viewContent
+    this.logger.debug(`Found ${viewImages.length} images in view content`)
+
+    // Extract images already in storage content
+    const storageImages = this.extractImagesFromHtml(storageContent)
+    this.logger.debug(`Found ${storageImages.length} images in storage content`)
+
+    // Find images that are in view but not in storage (by filename)
+    const storageImageFilenames = new Set(
+      storageImages.map((img) => this.extractFilenameFromSrc(img.src)).filter(Boolean),
+    )
+
+    const missingImages = viewImages.filter((img) => {
+      const filename = this.extractFilenameFromSrc(img.src)
+      return filename && !storageImageFilenames.has(filename)
+    })
+
+    if (missingImages.length === 0) {
+      this.logger.debug('All view images already present in storage')
+      return storageContent
+    }
+
+    this.logger.info(`Merging ${missingImages.length} missing images from view content`)
+
+    // Merge missing images into storage content
+    return this.mergeImagesIntoContent(storageContent, viewContent, missingImages)
+  }
+
+  /**
+   * Extract image information from HTML content
+   */
+  private extractImagesFromHtml(html: string): Array<{ src: string; alt: string; html: string }> {
+    const images: Array<{ src: string; alt: string; html: string }> = []
+
+    if (!html) {
+      return images
+    }
+
+    try {
+      const dom = new JSDOM(html)
+      const doc = dom.window.document
+      const imgElements = doc.querySelectorAll('img')
+
+      imgElements.forEach((img) => {
+        const src = img.getAttribute('data-original-src') || img.getAttribute('src') || ''
+        // Only include Confluence images (attachments/downloads)
+        if (src.includes('/download/') || src.includes('/attachments/')) {
+          images.push({
+            src,
+            alt: img.getAttribute('alt') || '',
+            html: img.outerHTML,
+          })
+        }
+      })
+    } catch (error) {
+      this.logger.debug('Failed to extract images from HTML:', error)
+    }
+
+    return images
+  }
+
+  /**
+   * Extract filename from image src URL
+   */
+  private extractFilenameFromSrc(src: string): string | null {
+    if (!src) {
+      return null
+    }
+
+    try {
+      // URL format: /download/attachments/pageId/filename.png?...
+      // or: /attachments/pageId/filename.png?...
+      let filename = src.split('/').pop() || ''
+
+      // Remove query string
+      if (filename.includes('?')) {
+        filename = filename.split('?')[0]
+      }
+
+      // Decode URL-encoded characters
+      try {
+        filename = decodeURIComponent(filename)
+      } catch {
+        // If decoding fails, use the original
+      }
+
+      return filename || null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Merge missing images from view content into storage content
+   *
+   * Strategy: Insert images at contextually appropriate positions by analyzing
+   * the surrounding content structure. If context cannot be determined,
+   * append images at the end of the content.
+   */
+  private mergeImagesIntoContent(
+    storageContent: string,
+    viewContent: string,
+    missingImages: Array<{ src: string; alt: string; html: string }>,
+  ): string {
+    try {
+      const storageDom = new JSDOM(storageContent)
+      const viewDom = new JSDOM(viewContent)
+      const storageDoc = storageDom.window.document
+      const viewDoc = viewDom.window.document
+
+      for (const image of missingImages) {
+        // Try to find contextual position for the image
+        const position = this.findImagePosition(viewDoc, image.src)
+
+        if (position.strategy === 'after-element' && position.contextText) {
+          // Try to find a similar element in storage and insert after it
+          const inserted = this.insertImageAfterContext(
+            storageDoc,
+            image,
+            position.contextText,
+          )
+
+          if (!inserted) {
+            // Fallback: append to body
+            this.appendImageToBody(storageDoc, image)
+          }
+        } else {
+          // Default: append to body
+          this.appendImageToBody(storageDoc, image)
+        }
+      }
+
+      return storageDoc.body.innerHTML
+    } catch (error) {
+      this.logger.warn('Failed to merge images, returning storage content:', error)
+      return storageContent
+    }
+  }
+
+  /**
+   * Find the position context for an image in the view content
+   */
+  private findImagePosition(
+    viewDoc: Document,
+    imageSrc: string,
+  ): { strategy: 'after-element' | 'append'; contextText?: string } {
+    try {
+      // Find the image in view content
+      const imgElements = viewDoc.querySelectorAll('img')
+      let targetImg: Element | null = null
+
+      for (const img of imgElements) {
+        const src = img.getAttribute('data-original-src') || img.getAttribute('src') || ''
+        if (src === imageSrc) {
+          targetImg = img
+          break
+        }
+      }
+
+      if (!targetImg) {
+        return { strategy: 'append' }
+      }
+
+      // Look for previous sibling text content (heading, paragraph, etc.)
+      let sibling = targetImg.previousElementSibling
+      while (sibling) {
+        const text = sibling.textContent?.trim()
+        if (text && text.length > 10 && text.length < 200) {
+          return {
+            strategy: 'after-element',
+            contextText: text,
+          }
+        }
+        sibling = sibling.previousElementSibling
+      }
+
+      // Check parent element for context
+      const parent = targetImg.parentElement
+      if (parent) {
+        const prevSibling = parent.previousElementSibling
+        const text = prevSibling?.textContent?.trim()
+        if (text && text.length > 10 && text.length < 200) {
+          return {
+            strategy: 'after-element',
+            contextText: text,
+          }
+        }
+      }
+
+      return { strategy: 'append' }
+    } catch {
+      return { strategy: 'append' }
+    }
+  }
+
+  /**
+   * Insert an image after an element with matching context text
+   */
+  private insertImageAfterContext(
+    storageDoc: Document,
+    image: { src: string; alt: string; html: string },
+    contextText: string,
+  ): boolean {
+    try {
+      // Find elements with similar text content
+      const allElements = storageDoc.body.querySelectorAll('*')
+
+      for (const element of allElements) {
+        const text = element.textContent?.trim()
+        if (text && text.includes(contextText.substring(0, 50))) {
+          // Create image element
+          const imgElement = storageDoc.createElement('img')
+          imgElement.setAttribute('src', image.src)
+          imgElement.setAttribute('alt', image.alt)
+          imgElement.setAttribute('data-confluence-image', 'true')
+          imgElement.setAttribute('data-original-src', image.src)
+
+          // Insert after the matching element
+          if (element.parentNode) {
+            element.parentNode.insertBefore(imgElement, element.nextSibling)
+            this.logger.debug(`Inserted image after context: "${contextText.substring(0, 30)}..."`)
+            return true
+          }
+        }
+      }
+
+      return false
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Append an image to the body of the storage document
+   */
+  private appendImageToBody(
+    storageDoc: Document,
+    image: { src: string; alt: string; html: string },
+  ): void {
+    try {
+      const imgElement = storageDoc.createElement('img')
+      imgElement.setAttribute('src', image.src)
+      imgElement.setAttribute('alt', image.alt)
+      imgElement.setAttribute('data-confluence-image', 'true')
+      imgElement.setAttribute('data-original-src', image.src)
+
+      // Add a paragraph wrapper for better formatting
+      const wrapper = storageDoc.createElement('p')
+      wrapper.appendChild(imgElement)
+
+      storageDoc.body.appendChild(wrapper)
+      this.logger.debug(`Appended image to body: ${this.extractFilenameFromSrc(image.src)}`)
+    } catch (error) {
+      this.logger.debug('Failed to append image to body:', error)
+    }
   }
 
   /**
