@@ -85,15 +85,32 @@ export class MarkdownConverter extends BaseConverter {
         return (
           node.nodeName === 'IMG' &&
           (node.getAttribute('data-confluence-image') === 'true' ||
-            (node.getAttribute('src')?.includes('/download/') ?? false))
+            (node.getAttribute('src')?.includes('/download/') ?? false) ||
+            (node.getAttribute('src')?.includes('/attachments/') ?? false))
         )
       },
       replacement: (_content, node: any) => {
         const alt = node.getAttribute('alt') || node.getAttribute('title') || ''
         const src = node.getAttribute('data-original-src') || node.getAttribute('src') || ''
-        const filename = src.split('/').pop() || 'image.png'
 
-        // Rewrite to relative path (will be downloaded to assets/)
+        // Extract filename from URL path
+        // URL format: /download/attachments/pageId/filename.png?...
+        // or: /attachments/pageId/filename.png?...
+        let filename = src.split('/').pop() || 'image.png'
+
+        // Remove query string from filename
+        if (filename.includes('?')) {
+          filename = filename.split('?')[0]
+        }
+
+        // Decode URL-encoded characters (e.g., %20 -> space, %28 -> (, %29 -> ))
+        try {
+          filename = decodeURIComponent(filename)
+        } catch {
+          // If decoding fails, use the original filename
+        }
+
+        // Build relative path - use the decoded filename
         const relativePath = `./assets/${filename}`
 
         let markdown = `![${alt}](${relativePath})`

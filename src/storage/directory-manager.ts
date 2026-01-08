@@ -71,16 +71,23 @@ export class DirectoryManager {
 
   /**
    * Get or create assets directory for a page
+   * @param spaceKey - The space key
+   * @param pageId - The page ID (optional, for backward compatibility)
+   * @param flat - If true, creates assets directly in space folder (default: true for simpler structure)
    */
-  async getAssetsDirectory(spaceKey: string, pageId: string): Promise<string> {
-    const cacheKey = `${spaceKey}/${pageId}`
+  async getAssetsDirectory(spaceKey: string, pageId?: string, flat: boolean = true): Promise<string> {
+    const cacheKey = flat ? spaceKey : `${spaceKey}/${pageId}`
 
     if (this.structure.assets.has(cacheKey)) {
       return this.structure.assets.get(cacheKey)!
     }
 
     const spaceDir = await this.getSpaceDirectory(spaceKey)
-    const assetsDir = join(spaceDir, 'assets', pageId)
+    // Use flat structure by default: {spaceKey}/assets/
+    // Or nested structure if flat=false: {spaceKey}/assets/{pageId}/
+    const assetsDir = flat
+      ? join(spaceDir, 'assets')
+      : join(spaceDir, 'assets', pageId || 'unknown')
 
     await this.ensureDirectoryExists(assetsDir)
 
@@ -88,6 +95,14 @@ export class DirectoryManager {
     this.logger.debug(`Created assets directory: ${assetsDir}`)
 
     return assetsDir
+  }
+
+  /**
+   * Get relative path from page file to assets directory
+   * Used for generating correct markdown image paths
+   */
+  getRelativeAssetsPath(): string {
+    return './assets'
   }
 
   /**

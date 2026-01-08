@@ -12,6 +12,15 @@ export interface DownloadResult {
   error?: string
 }
 
+export interface ImageDownloadResult extends DownloadResult {
+  /** Original filename from Confluence (may have special chars) */
+  originalFilename: string
+  /** Sanitized filename used on disk */
+  sanitizedFilename: string
+  /** Relative path for use in markdown (e.g., ./assets/image.png) */
+  relativePath: string
+}
+
 export interface AssetDownloaderOptions {
   attachmentHandler: AttachmentHandler
   fileWriter: FileWriter
@@ -42,11 +51,16 @@ export class AssetDownloader {
 
   /**
    * Download all attachments for a page
+   * @param pageId - The page ID to fetch attachments from
+   * @param spaceKey - The space key for directory structure
+   * @param includeAll - If true, download all attachments; if false, only images
+   * @param useFlat - If true, use flat assets directory (default: true)
    */
   async downloadPageAssets(
     pageId: string,
     spaceKey: string,
     includeAll: boolean = true,
+    useFlat: boolean = true,
   ): Promise<DownloadResult[]> {
     this.logger.info(`Downloading assets for page ${pageId}...`)
 
@@ -68,8 +82,8 @@ export class AssetDownloader {
         `Found ${assetsToDownload.length} assets to download for page ${pageId}`,
       )
 
-      // Get assets directory
-      const assetsDir = await this.directoryManager.getAssetsDirectory(spaceKey, pageId)
+      // Get assets directory (flat structure by default)
+      const assetsDir = await this.directoryManager.getAssetsDirectory(spaceKey, pageId, useFlat)
 
       // Download all assets
       const results: DownloadResult[] = []
@@ -88,6 +102,96 @@ export class AssetDownloader {
     } catch (error) {
       this.logger.error(`Failed to download assets for page ${pageId}:`, error)
       return []
+    }
+  }
+
+  /**
+   * Download images referenced in markdown content
+   * Returns detailed results with original/sanitized filenames for path replacement
+   */
+  async downloadPageImages(
+    pageId: string,
+    spaceKey: string,
+  ): Promise<ImageDownloadResult[]> {
+    this.logger.info(`Downloading images for page ${pageId}...`)
+
+    try {
+      // Fetch only image attachments
+      const images = await this.attachmentHandler.fetchPageImages(pageId)
+
+      if (images.length === 0) {
+        this.logger.debug(`No images found for page ${pageId}`)
+        return []
+      }
+
+      this.logger.info(`Found ${images.length} images to download for page ${pageId}`)
+
+      // Get assets directory (flat structure)
+      const assetsDir = await this.directoryManager.getAssetsDirectory(spaceKey)
+      const relativeAssetsPath = this.directoryManager.getRelativeAssetsPath()
+
+      // Download all images
+      const results: ImageDownloadResult[] = []
+
+      for (const image of images) {
+        const result = await this.downloadImage(image, assetsDir, relativeAssetsPath)
+        results.push(result)
+      }
+
+      const successCount = results.filter((r) => r.success).length
+      this.logger.info(`Downloaded ${successCount}/${images.length} images for page ${pageId}`)
+
+      return results
+    } catch (error) {
+      this.logger.error(`Failed to download images for page ${pageId}:`, error)
+      return []
+    }
+  }
+
+  /**
+   * Download a single image with full metadata
+   */
+  private async downloadImage(
+    attachment: Attachment,
+    targetDir: string,
+    relativeAssetsPath: string,
+  ): Promise<ImageDownloadResult> {
+    const originalFilename = attachment.filename
+    // Keep the original filename - Confluence handles special chars fine
+    const sanitizedFilename = originalFilename
+
+    this.logger.debug(`Downloading image: ${originalFilename}`)
+
+    try {
+      // Download attachment
+      const buffer = await this.attachmentHandler.downloadAttachment(attachment)
+
+      // Write to file
+      const filePath = join(targetDir, sanitizedFilename)
+      const writeResult = await this.fileWriter.writeBinary(filePath, buffer)
+
+      return {
+        filename: sanitizedFilename,
+        originalFilename,
+        sanitizedFilename,
+        path: writeResult.path,
+        relativePath: `${relativeAssetsPath}/${sanitizedFilename}`,
+        size: writeResult.size,
+        success: true,
+      }
+    } catch (error) {
+      this.logger.error(`Failed to download image ${originalFilename}:`, error)
+
+      return {
+        filename: sanitizedFilename,
+        originalFilename,
+        sanitizedFilename,
+        path: '',
+        relativePath: `${relativeAssetsPath}/${sanitizedFilename}`,
+        size: 0,
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
     }
   }
 

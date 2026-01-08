@@ -8,5 +8,6 @@ export {
   AssetDownloader,
   createAssetDownloader,
   type DownloadResult,
+  type ImageDownloadResult,
   type AssetDownloaderOptions,
 } from './asset-downloader.js'

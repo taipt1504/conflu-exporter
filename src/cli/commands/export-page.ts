@@ -154,7 +154,38 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
 
     logger.info(chalk.green(`✓ Converted to ${config.format} (${converted.content.length} chars)`))
 
-    // Step 8: Save page content
+    // Step 8: Download images BEFORE saving markdown
+    // This ensures images are available when markdown is written
+    logger.info('Downloading page images...')
+
+    const imageResults = await assetDownloader.downloadPageImages(
+      page.id,
+      page.spaceKey,
+    )
+
+    const imageSuccessCount = imageResults.filter((r) => r.success).length
+
+    if (imageSuccessCount > 0) {
+      logger.info(chalk.green(`✓ Downloaded ${imageSuccessCount} images`))
+
+      // Log downloaded images for debugging
+      for (const result of imageResults.filter((r) => r.success)) {
+        logger.debug(`  - ${result.originalFilename} -> ${result.relativePath}`)
+      }
+    } else if (imageResults.length === 0) {
+      logger.debug('No images found in page')
+    } else {
+      logger.warn(
+        chalk.yellow(`⚠ Downloaded ${imageSuccessCount}/${imageResults.length} images`),
+      )
+
+      // Log failed downloads
+      for (const result of imageResults.filter((r) => !r.success)) {
+        logger.warn(`  - Failed: ${result.originalFilename}: ${result.error}`)
+      }
+    }
+
+    // Step 9: Save page content
     const pagePath = await directoryManager.getPageFilePath(
       page.spaceKey,
       page.title,
@@ -165,30 +196,36 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
 
     logger.info(chalk.green(`✓ Saved page: ${pagePath}`))
 
-    // Step 9: Download attachments if requested
+    // Step 10: Download additional attachments if requested (non-image files)
     if (config.includeAttachments) {
-      logger.info('Downloading attachments...')
+      logger.info('Downloading additional attachments...')
 
+      // Download all attachments (this will include images again, but that's OK - they'll be overwritten)
       const downloadResults = await assetDownloader.downloadPageAssets(
         page.id,
         page.spaceKey,
-        true,
+        true, // Include all attachments
+        true, // Use flat directory structure
       )
 
-      const successCount = downloadResults.filter((r) => r.success).length
+      // Filter to show only non-image results for logging
+      const nonImageResults = downloadResults.filter(
+        (r) => !r.filename.match(/\.(png|jpg|jpeg|gif|svg|webp|bmp|ico)$/i),
+      )
+      const successCount = nonImageResults.filter((r) => r.success).length
 
       if (successCount > 0) {
-        logger.info(chalk.green(`✓ Downloaded ${successCount} attachments`))
-      } else if (downloadResults.length === 0) {
-        logger.info('No attachments found')
+        logger.info(chalk.green(`✓ Downloaded ${successCount} additional attachments`))
+      } else if (nonImageResults.length === 0) {
+        logger.debug('No additional attachments found')
       } else {
         logger.warn(
-          chalk.yellow(`⚠ Downloaded ${successCount}/${downloadResults.length} attachments`),
+          chalk.yellow(`⚠ Downloaded ${successCount}/${nonImageResults.length} additional attachments`),
         )
       }
     }
 
-    // Step 10: Save manifest
+    // Step 11: Save manifest
     const manifest = {
       exportedAt: new Date().toISOString(),
       tool: 'conflu-exporter',
@@ -210,13 +247,14 @@ export async function exportPage(options: ExportPageOptions): Promise<void> {
 
     logger.info(chalk.green(`✓ Saved manifest: ${manifestPath}`))
 
-    // Step 11: Success summary
+    // Step 12: Success summary
     logger.info(chalk.green.bold('\n✓ Export complete!'))
     logger.info(`\nExported files:`)
     logger.info(`  Page: ${chalk.cyan(pagePath)}`)
 
-    if (config.includeAttachments) {
-      const assetsDir = await directoryManager.getAssetsDirectory(page.spaceKey, page.id)
+    // Always show assets directory if images were downloaded
+    if (imageResults.length > 0 || config.includeAttachments) {
+      const assetsDir = await directoryManager.getAssetsDirectory(page.spaceKey)
       logger.info(`  Assets: ${chalk.cyan(assetsDir)}`)
     }
 
