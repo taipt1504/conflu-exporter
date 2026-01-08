@@ -113,7 +113,9 @@ export class MarkdownConverter extends BaseConverter {
         // Build relative path - use the decoded filename
         const relativePath = `./assets/${filename}`
 
-        let markdown = `![${alt}](${relativePath})`
+        // Wrap path in angle brackets to support filenames with spaces and special characters
+        // This is the standard Markdown way to handle URLs with spaces
+        let markdown = `![${alt}](<${relativePath}>)`
 
         // Preserve dimensions if available
         const width = node.getAttribute('width')
@@ -146,6 +148,42 @@ export class MarkdownConverter extends BaseConverter {
         }
 
         return markdown
+      },
+    })
+
+    // Rule: Handle Confluence attachment links (PDFs, DOCX, ZIP, etc.)
+    service.addRule('confluenceAttachments', {
+      filter: (node: any) => {
+        if (node.nodeName !== 'A') return false
+        // Skip if already handled as Confluence internal link
+        if (node.getAttribute('data-confluence-link') === 'true') return false
+        const href = node.getAttribute('href') || ''
+        // Match attachment download URLs
+        return href.includes('/download/') || href.includes('/attachments/')
+      },
+      replacement: (content, node: any) => {
+        const href = node.getAttribute('href') || ''
+
+        // Extract filename from URL path
+        let filename = href.split('/').pop() || 'file'
+
+        // Remove query string
+        if (filename.includes('?')) {
+          filename = filename.split('?')[0]
+        }
+
+        // Decode URL-encoded characters
+        try {
+          filename = decodeURIComponent(filename)
+        } catch {
+          // If decoding fails, use original
+        }
+
+        // Build relative path to assets folder
+        const relativePath = `./assets/${filename}`
+
+        // Wrap path in angle brackets to support filenames with spaces
+        return `[${content}](<${relativePath}>)`
       },
     })
 
