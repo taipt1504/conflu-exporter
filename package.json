@@ -33,7 +33,11 @@
     "prepare": "husky install",
     "commit": "git-cz",
     "release": "semantic-release",
-    "release:dry": "semantic-release --dry-run"
+    "release:dry": "semantic-release --dry-run",
+    "build:extension": "cd extension && pnpm install && pnpm build && cd ../dist-extension && mv public/*.html . 2>/dev/null; rm -rf public; sed -i '' 's|\\.\\./|./|g' popup.html options.html",
+    "dev:extension": "cd extension && pnpm dev",
+    "watch:extension": "cd extension && pnpm watch",
+    "package:extension": "cd dist-extension && zip -r ../confluence-exporter.zip ."
   },
   "keywords": [
     "confluence",
