@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.4.0](https://github.com/taipt1504/conflu-exporter/compare/v1.3.2...v1.4.0) (2026-01-09)
+
+
+### ✨ Features
+
+* comprehensive browser extension enhancements ([e7baaad](https://github.com/taipt1504/conflu-exporter/commit/e7baaad0693191e9a8d2b5837a69a3fe8e1b4414))
+
 ## [1.3.2](https://github.com/taipt1504/conflu-exporter/compare/v1.3.1...v1.3.2) (2026-01-09)
 
 
