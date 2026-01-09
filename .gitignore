@@ -50,3 +50,9 @@ extension/src/**/*.js
 extension/src/**/*.js.map
 extension/src/**/*.d.ts
 extension/src/**/*.d.ts.map
+
+# Generated files in core src (accidental emission)
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+src/**/*.d.ts.map
