@@ -39,3 +39,14 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Extension build output
+dist-extension/
+extension/dist/
+extension/node_modules/
+
+# Generated files in extension source (due to tsc side-by-side emission)
+extension/src/**/*.js
+extension/src/**/*.js.map
+extension/src/**/*.d.ts
+extension/src/**/*.d.ts.map
