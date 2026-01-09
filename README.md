@@ -1,449 +1,147 @@
 # Confluence Exporter
 
-[![npm version](https://img.shields.io/npm/v/conflu-exporter.svg)](https://www.npmjs.com/package/conflu-exporter)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/node/v/conflu-exporter.svg)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
-[![pnpm](https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg)](https://pnpm.io/)
+<div align="center">
+  <img src="extension/public/icons/logo_final.png" alt="Confluence Exporter Logo" width="128" height="128" />
+  
+  <h3>The Ultimate Confluence to Markdown Suite</h3>
+  <p>
+    Create high-fidelity Markdown exports from Confluence Server & Cloud.<br>
+    Available as a <b>Browser Extension</b> for individuals and a <b>CLI/Library</b> for automation.
+  </p>
 
-A powerful CLI tool and TypeScript library for exporting Confluence pages and spaces to Markdown format with full fidelity preservation for future sync capabilities.
+  <p>
+    <a href="https://chrome.google.com/webstore/detail/your-id">
+      <img src="https://img.shields.io/badge/Chrome_Web_Store-Available-4285F4?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Chrome Extension" />
+    </a>
+    <a href="https://www.npmjs.com/package/conflu-exporter">
+      <img src="https://img.shields.io/badge/NPM_Package-v1.3.1-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="NPM Package" />
+    </a>
+  </p>
+</div>
 
-## Features
+---
 
-- 🚀 **CLI Tool**: Command-line interface for easy exports
-- 📄 **Export Formats**: Markdown with diagram source code preservation (PDF/DOCX support coming soon)
-- 🎨 **Mermaid Diagrams**: Exports Mermaid diagrams as source code in markdown code fences
-- 📦 **Batch Operations**: Export multiple pages, entire spaces, or from URLs
-- 🔄 **Sync-Ready**: Full metadata preservation for future bidirectional sync
-- 🖼️ **Attachments**: Download images and files at original resolution
-- 🔐 **Secure Auth**: API token authentication with environment variable support
-- 📊 **Progress Tracking**: Real-time progress indicators for batch operations
-- 🎯 **Type-Safe**: Full TypeScript support with comprehensive type definitions
+## 🎯 Choose Your Tool
 
-## Installation
+| Feature | [**Browser Extension**](extension/README.md) | [**CLI / Library**](#-cli-tool) |
+| :--- | :--- | :--- |
+| **Best For** | Manual exports, quick tasks, non-technical users | CI/CD, Bulk operations, Scheduled backups |
+| **Usage** | 1-Click via Chrome Toolbar | Terminal or Node.js scripts |
+| **Setup** | Install from Store | `npm install -g` |
+| **Auth** | Log in via Browser (Cookies) | API Token / Environment Variables |
+| **Fidelity** | ⭐⭐⭐⭐⭐ (Hybrid Extraction) | ⭐⭐⭐⭐ (API Content) |
+| **Attachments** | ✅ Downloads with file | ✅ Downloads to folder |
 
-### Global Installation (CLI)
+---
+
+## 🧩 Browser Extension
+
+The easiest way to export pages. Just navigate to a page and click export.
+
+- **Download:** [Chrome Web Store](#) (Link pending)
+- **Documentation:** [Read Extension Docs](extension/README.md)
+- **Source:** [`/extension`](extension/)
+
+---
+
+## 💻 CLI Tool
+
+A powerful command-line interface for exporting Confluence pages and spaces to Markdown. Ideal for migration scripts and backups.
+
+### Installation
 
 ```bash
+# Global Install
 npm install -g conflu-exporter
-# or
-pnpm add -g conflu-exporter
-# or
-yarn global add conflu-exporter
-```
 
-### Local Installation (Library)
-
-```bash
+# Local Install
 npm install conflu-exporter
-# or
-pnpm add conflu-exporter
-# or
-yarn add conflu-exporter
 ```
 
-## CLI Usage
+### Quick Usage
 
-### Authentication
-
-You can authenticate in three ways (priority: CLI flags → Environment variables → Config file):
-
-**Environment Variables** (Recommended):
-
+**1. Set Credentials** (Optional but recommended)
 ```bash
 export CONFLUENCE_BASE_URL="https://your-domain.atlassian.net"
 export CONFLUENCE_EMAIL="your-email@example.com"
 export CONFLUENCE_TOKEN="your-api-token"
 ```
 
-**Config File** (`.conflurc`):
-
-```json
-{
-  "baseUrl": "https://your-domain.atlassian.net",
-  "email": "your-email@example.com",
-  "format": "markdown",
-  "output": "./exports",
-  "includeAttachments": true
-}
-```
-
-**CLI Flags**:
-
+**2. Export a Page**
 ```bash
-conflu export page 123456 -e your-email@example.com -t your-token -u https://your-domain.atlassian.net
-```
-
-### Export Commands
-
-#### Export Single Page
-
-```bash
-# Basic page export
 conflu export page 123456
-
-# With attachments
-conflu export page 123456 --include-attachments
-
-# Custom output directory
-conflu export page 123456 -o ./my-exports
-
-# Dry run (preview without exporting)
-conflu export page 123456 --dry-run
 ```
 
-#### Export Entire Space
-
+**3. Export a Space**
 ```bash
-# Export all pages in a space
-conflu export space MYSPACE
-
-# Include child pages recursively
-conflu export space MYSPACE --include-children
-
-# Flat structure (no hierarchy)
-conflu export space MYSPACE --flat
-
-# With attachments
-conflu export space MYSPACE --include-attachments
+conflu export space ENGINEERING --include-attachments
 ```
 
-#### Export from URL
-
+**4. Batch Export** from file
 ```bash
-# Export page from URL (auto-detects page ID)
-conflu export url "https://your-domain.atlassian.net/wiki/spaces/TEAM/pages/123456/Page+Title"
-
-# Export entire space from URL
-conflu export url "https://your-domain.atlassian.net/wiki/spaces/TEAM/overview"
+conflu export batch list-of-pages.json
 ```
 
-#### Batch Export
+[> View Full CLI Documentation](docs/COMMAND_REFERENCE.md)
 
-Export multiple pages from a JSON or CSV file:
-
-**JSON Format** (`batch-export.json`):
-
-```json
-[
-  {
-    "pageId": "123456",
-    "title": "Product Requirements"
-  },
-  {
-    "pageId": "789012",
-    "title": "Architecture Overview"
-  },
-  {
-    "pageId": "345678"
-  }
-]
-```
-
-**CSV Format** (`batch-export.csv`):
-
-```csv
-pageId,title
-123456,Product Requirements
-789012,Architecture Overview
-345678
-```
-
-**Run Batch Export**:
-
-```bash
-# From JSON file
-conflu export batch examples/batch-export.json
-
-# From CSV file
-conflu export batch examples/batch-export.csv --include-attachments
-```
-
-### Global Options
-
-```bash
-conflu [command] [options]
-
-Options:
-  -v, --verbose     Enable verbose logging
-  -q, --quiet       Suppress all output except errors
-  -V, --version     Output version number
-  -h, --help        Display help for command
-```
-
-### Output Structure
-
-```
-exports/
-├── SPACE-KEY/
-│   ├── page-title.md
-│   ├── another-page.md
-│   └── assets/
-│       ├── page-id-1/
-│       │   ├── image1.png
-│       │   └── diagram.svg
-│       └── page-id-2/
-│           └── screenshot.jpg
-├── manifest.json
-└── export-log.txt
-```
-
-## Key Features
-
-### Diagram Source Code Preservation
-
-**Mermaid Diagrams**: The tool automatically extracts Mermaid diagram source code and exports it as markdown code fences:
-
-**Confluence Page**:
-
-```
-{mermaid}
-graph TD
-  A[Start] --> B[Process]
-  B --> C[End]
-{mermaid}
-```
-
-**Exported Markdown**:
-
-````markdown
-```mermaid
-graph TD
-  A[Start] --> B[Process]
-  B --> C[End]
-```
-````
-
-This ensures diagrams can be edited and re-rendered after export, maintaining full compatibility for future sync operations.
-
-### Full Metadata Preservation
-
-Each exported page includes comprehensive frontmatter metadata:
-
-```yaml
 ---
-title: 'Page Title'
-confluenceId: '123456'
-confluenceSpaceKey: 'TEAM'
-confluenceVersion: 5
-confluenceCreatedBy: 'user@example.com'
-confluenceCreatedAt: '2025-01-01T10:00:00Z'
-confluenceUpdatedAt: '2026-01-07T12:00:00Z'
-confluenceParentId: '789012'
-confluenceLabels: ['documentation', 'api']
-macros:
-  mermaid: 2
-  code: 5
-exportedAt: '2026-01-07T14:30:00Z'
+
+## ✨ Core Features (Both Versions)
+
+- **Mermaid Diagrams:** automatically converts Confluence Mermaid plugins into native Markdown `mermaid` code blocks.
+- **Smart Code Blocks:** Preserves syntax highlighting, newlines, and spacing from `code` and `noformat` macros.
+- **Table Handling:** Converts complex Confluence tables into standard GFM Markdown tables.
+- **Metadata:** Adds YAML frontmatter (author, date, labels) to every exported file.
+- **Secure:** Your data stays local. We communicate directly with your Confluence instance.
+
 ---
-```
 
-This metadata enables:
+## 📦 Library Usage (for Developers)
 
-- **Change detection** for incremental updates
-- **Bidirectional sync** compatibility
-- **Page relationship** preservation
-- **Version tracking** for conflict resolution
-
-### Content Fidelity
-
-- **Images**: Downloaded at original resolution with metadata
-- **Links**: Preserved with page IDs for future linking
-- **Code Blocks**: Language and source code fully preserved
-- **Diagrams**: Source code extraction for DrawIO, Gliffy, Lucidchart
-- **Panels**: Info, warning, note panels converted to blockquotes
-- **Macros**: All Confluence macros documented in metadata
-
-## Documentation
-
-Comprehensive guides to help you get started and master `conflu-exporter`:
-
-### Getting Started
-
-- **[Installation Guide](docs/INSTALLATION.md)** - Step-by-step installation for all platforms
-- **[Quick Start Guide](docs/QUICK_START.md)** - Get up and running in 5 minutes
-- **[Authentication Guide](docs/AUTHENTICATION.md)** - Secure credential management
-
-### Reference
-
-- **[Command Reference](docs/COMMAND_REFERENCE.md)** - Complete guide to all CLI commands
-- **[Configuration Reference](docs/CONFIGURATION.md)** - All configuration options explained
-- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Solutions to common issues
-
-### Advanced
-
-- **[Use Cases & Examples](docs/USE_CASES.md)** - Real-world scenarios and solutions
-- **[Best Practices](docs/BEST_PRACTICES.md)** - Security, performance, and optimization tips
-
-### Development & Publishing
-
-- **[Auto-Publish Setup](docs/AUTO_PUBLISH_SETUP.md)** - How to set up automatic publishing to npm and GitHub Packages
-
-### Quick Links
-
-| I want to...                | Go to...                                                                        |
-| --------------------------- | ------------------------------------------------------------------------------- |
-| Install the tool            | [Installation Guide](docs/INSTALLATION.md)                                      |
-| Export my first page        | [Quick Start](docs/QUICK_START.md#step-4-your-first-export)                     |
-| Set up authentication       | [Authentication Guide](docs/AUTHENTICATION.md)                                  |
-| Export an entire space      | [Command Reference - export space](docs/COMMAND_REFERENCE.md#export-space)      |
-| Batch export multiple pages | [Command Reference - export batch](docs/COMMAND_REFERENCE.md#export-batch)      |
-| Fix an error                | [Troubleshooting Guide](docs/TROUBLESHOOTING.md)                                |
-| Automate exports            | [Use Cases - CI/CD Integration](docs/USE_CASES.md#cicd-integration)             |
-| Optimize performance        | [Best Practices - Performance](docs/BEST_PRACTICES.md#performance-optimization) |
-
-## Library Usage
-
-### Basic Example
+You can use the core logic as a library in your own Node.js applications.
 
 ```typescript
 import { ConfluenceExporter } from 'conflu-exporter'
 
 const exporter = new ConfluenceExporter({
-  baseUrl: 'https://your-domain.atlassian.net',
+  baseUrl: 'https://my-org.atlassian.net',
   auth: {
-    username: 'your-email@example.com',
-    token: 'your-api-token',
-  },
-  format: 'markdown',
+    username: 'me@example.com',
+    token: process.env.API_TOKEN
+  }
 })
 
-// Export an entire space
-const result = await exporter.exportSpace('MYSPACE')
-console.log(`Exported ${result.pages.length} pages`)
-
-// Export a single page
+// Export a page properly
 const page = await exporter.exportPage('123456')
-console.log(`Page title: ${page.title}`)
+console.log(page.markdown)
 ```
 
-### Configuration Options
+---
 
-```typescript
-interface ExporterOptions {
-  baseUrl: string // Required: Confluence instance URL
-  auth?: {
-    username?: string
-    token?: string
-  }
-  format?: 'markdown' | 'html' | 'json' // Default: 'markdown'
-  includeAttachments?: boolean // Default: false
-}
-```
+## 🛠 Project Structure
 
-### Utility Functions
-
-```typescript
-import { formatDate, sanitizeFilename, extractSpaceKey } from 'conflu-exporter'
-
-// Format a date to ISO string
-const isoDate = formatDate(new Date())
-
-// Sanitize filenames for safe file system usage
-const safeName = sanitizeFilename('My Page: Title (2024)!')
-
-// Extract space key from Confluence URL
-const spaceKey = extractSpaceKey('https://example.atlassian.net/wiki/spaces/MYSPACE/pages/123')
-```
-
-## 📚 Documentation
-
-### CI/CD & Publishing
-
-- [GitHub Actions Build & Publish](docs/AUTO_PUBLISH_SETUP.md) - CI/CD workflow documentation
-- [NPM Token Setup Guide](docs/NPM_TOKEN_SETUP.md) - Complete guide for setting up npm authentication
-- [Token Verification Script](scripts/verify-npm-token.sh) - Test your npm token before publishing
-
-### Quick Help
-
-- **Troubleshooting npm publish errors?** → See [NPM_TOKEN_SETUP.md](docs/NPM_TOKEN_SETUP.md)
-- **Need to verify your token?** → Run `./scripts/verify-npm-token.sh YOUR_TOKEN`
-- **404 or ENEEDAUTH errors?** → Check [Troubleshooting section](docs/NPM_TOKEN_SETUP.md#-troubleshooting)
-
-## Development
-
-### Setup
-
-```bash
-# Install dependencies
-pnpm install
-
-# Run tests
-pnpm test
-
-# Run tests with UI
-pnpm test:ui
-
-# Run tests with coverage
-pnpm test:coverage
-
-# Build the library
-pnpm build
-
-# Type checking
-pnpm type-check
-
-# Linting
-pnpm lint
-pnpm lint:fix
-
-# Format code
-pnpm format
-pnpm format:check
-```
-
-### Project Structure
+This is a monorepo containing both the Core logic and the Extension.
 
 ```
 conflu-exporter/
-├── src/
-│   ├── index.ts          # Main entry point
-│   ├── exporter.ts       # Core exporter class
-│   ├── types.ts          # TypeScript type definitions
-│   └── utils.ts          # Utility functions
-├── tests/
-│   ├── exporter.test.ts  # Exporter tests
-│   └── utils.test.ts     # Utility tests
-├── dist/                 # Build output
-└── package.json
+├── bin/                  # CLI Entry point
+├── src/                  # Core Library & CLI Logic
+├── extension/            # Browser Extension Source
+├── dist/                 # Compiled Library
+├── dist-extension/       # Compiled Extension
+└── docs/                 # Detailed Documentation
 ```
 
-## API Reference
+## 🤝 Contributing
 
-### ConfluenceExporter
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
 
-The main class for interacting with Confluence.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-#### Methods
+## 📝 License
 
-- `exportSpace(spaceKey: string): Promise<ExportResult>` - Export all pages from a space
-- `exportPage(pageId: string): Promise<ConfluencePage>` - Export a single page
-- `getFormat(): string` - Get the configured export format
-
-### Types
-
-```typescript
-interface ConfluencePage {
-  id: string
-  title: string
-  content: string
-  spaceKey: string
-  version?: number
-  createdAt?: Date
-  updatedAt?: Date
-}
-
-interface ExportResult {
-  success: boolean
-  pages: ConfluencePage[]
-  errors?: string[]
-}
-```
-
-## License
-
-MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Distributed under the MIT License. See `LICENSE` for more information.

@@ -1,139 +1,124 @@
-# Confluence Exporter - Chrome Extension
+# Confluence Exporter - Browser Extension
 
-A Chrome extension for exporting Confluence pages to Markdown format with support for Mermaid diagrams, attachments, and batch operations.
+<div align="center">
+  <img src="public/icons/logo_final.png" alt="Confluence Exporter Logo" width="128" height="128" />
+  
+  <h3>The Ultimate Confluence to Markdown Tool</h3>
+  <p>
+    Create exact, high-fidelity Markdown exports from Confluence Server & Cloud.<br>
+    Preserve diagrams, code blocks, tables, and formatting with 100% accuracy.
+  </p>
 
-## ✨ Features
+  <p>
+    <a href="https://chrome.google.com/webstore/detail/your-id">Add to Chrome</a> •
+    <a href="#-features">Features</a> •
+    <a href="#-installation">Installation</a> •
+    <a href="#-development">Development</a>
+  </p>
+</div>
 
-- **Single Page Export** - Export any Confluence page to Markdown
-- **Space Export** - Export all pages in a Confluence space
-- **Batch Export** - Export multiple pages at once
-- **Attachments** - Download images and attachments
-- **Mermaid Diagrams** - Preserve diagram source as code blocks
-- **Context Menu** - Right-click on any Confluence page to export
-- **Auto-detect** - Automatically detects page ID/space key from current URL
+---
+
+## 📖 Overview
+
+**Confluence Exporter** is a professional-grade browser extension designed to extract documentation from Atlassian Confluence into standard Markdown format. Unlike simple HTML-to-Text converters, this engine prioritizes **fidelity**—ensuring that complex elements like **Mermaid diagrams**, **Code Blocks**, **Tables**, and **Technical Macros** are preserved exactly as they appear.
+
+Perfect for:
+- Migrating documentation to **Obsidian/Notion/Git**.
+- Backing up Spaces for offline access.
+- Converting technical specs into **Git-managed Markdown**.
+
+---
+
+## ✨ Key Features
+
+### 🔍 High-Fidelity Conversion
+- **Smart Code Extraction:** Automatically detects `code` and `noformat` macros, preserving syntax highlighting, newlines, and spacing. No more collapsed text dump.
+- **Mermaid JS Support:** Seamlessly converts Confluence Mermaid plugins into native Markdown `mermaid` code blocks.
+- **Table Preservation:** Handles complex tables (merged cells, headers) and converts them to GFM (GitHub Flavored Markdown) tables.
+
+### ⚡ Powerful Export Modes
+| Mode | Description |
+|------|-------------|
+| **Single Page** | Quick export of the current page with 2 clicks. |
+| **Space Export** | Bulk export an entire Knowledge Base or Project Space. |
+| **Batch Export** | Feed a list of URLs/IDs and export them sequentially. |
+| **Context Menu** | Right-click any link or page background to "Export to Markdown". |
+
+### 🛠 Technical Capabilities
+- **Direct API Integration:** Communicates directly with Confluence API for metadata and content.
+- **Asset Handling:** Downloads all attachments and images, rewriting links to be relative for offline viewing.
+- **Frontmatter injection:** Adds YAML frontmatter (author, date, labels, version) to every file.
+- **Secure:** API Tokens are stored in encrypted browser storage. No data leaves your local machine.
+
+---
 
 ## 🚀 Installation
 
-### From Chrome Web Store (Coming Soon)
-1. Visit the Chrome Web Store
-2. Click "Add to Chrome"
+### Option 1: Chrome Web Store (Recommended)
+1. Visit the **[Chrome Web Store Page](#)** (Link pending).
+2. Click **Add to Chrome**.
+3. Pin the extension to your toolbar.
 
-### Manual Installation (Development)
-
-1. **Clone and build the extension:**
+### Option 2: Manual / Developer Build
+1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-repo/conflu-exporter.git
+   git clone https://github.com/taipt1504/conflu-exporter.git
    cd conflu-exporter
+   ```
+2. **Install & Build:**
+   ```bash
    pnpm install
    pnpm build:extension
+   # Output is created in /dis-extension folder
    ```
+3. **Load Unpacked:**
+   - Go to `chrome://extensions`
+   - Enable **Developer Mode** (top right toggle).
+   - Click **Load Unpacked** and select the `dist-extension` folder.
 
-2. **Load in Chrome:**
-   - Open Chrome → `chrome://extensions`
-   - Enable **"Developer mode"** (top right)
-   - Click **"Load unpacked"**
-   - Select the `dist-extension/` folder
-
-3. **Verify installation:**
-   - Extension icon should appear in toolbar
-   - No errors in chrome://extensions
-
-## ⚙️ Configuration
-
-1. Click the extension icon in the toolbar
-2. Click **"⚙️ Configure Settings"** at the bottom
-3. Enter your Confluence credentials:
-   - **Confluence URL**: `https://your-domain.atlassian.net`
-   - **Email**: Your Atlassian account email
-   - **API Token**: Generate at [Atlassian Account Settings](https://id.atlassian.com/manage-profile/security/api-tokens)
-4. Click **"Test Connection"** to verify
-5. Click **"Save Settings"**
-
-## 📤 Usage
-
-### Single Page Export
-1. Navigate to a Confluence page
-2. Click the extension icon
-3. Page ID is auto-detected
-4. Toggle options (attachments, child pages)
-5. Click **"Export Page"**
-
-### Space Export
-1. Click the extension icon
-2. Select the **"Space"** tab
-3. Enter the space key (e.g., `DOCS`)
-4. Click **"Export Entire Space"**
-
-### Batch Export
-1. Click the extension icon
-2. Select the **"Batch"** tab
-3. Enter page IDs or URLs (one per line)
-4. Click **"Export X Pages"**
-
-### Context Menu
-1. Right-click on any Confluence page
-2. Select **"Export to Markdown"**
-3. File downloads automatically
-
-## 📁 Output
-
-Exported files are saved to your default Downloads folder:
-- `Page-Title.md` - Markdown file with frontmatter
-- `attachments/` - Images and files (if enabled)
-
-### Frontmatter Example
-```yaml
 ---
-id: "123456"
-title: "My Page Title"
-space: "DOCS"
-version: 5
-labels: ["documentation", "guide"]
-created_by: "John Doe"
-created_at: "2024-01-15T10:30:00Z"
-url: "https://your-domain.atlassian.net/wiki/spaces/DOCS/pages/123456"
+
+## ⚙️ Configuration Setup
+
+Before first use, you must authenticate with your Confluence instance.
+
+1. Click the **Extension Icon** → **Settings (⚙️)**.
+2. Enter your credentials:
+   - **Domain:** `https://your-company.atlassian.net`
+   - **Email:** Your Atlassian login email.
+   - **API Token:** [Create a Token Here](https://id.atlassian.com/manage-profile/security/api-tokens).
+3. Click **Test Connection**. A ✅ Success message confirms access.
+4. Save.
+
+> **Note:** For Confluence Server (On-Prem), use your username and password instead of Email/Token.
+
 ---
-```
 
-## 🔒 Security
+## 🎨 Troubleshooting & FAQ
 
-- API tokens are stored securely in Chrome's encrypted storage
-- No data is sent to third-party servers
-- All communication is directly with your Confluence instance
+**Q: My code blocks look weird or are missing?**  
+A: Ensure you are on the latest version. We use a **hybrid extraction engine** that reads the raw Storage Format to guarantee code block fidelity, bypassing browser rendering issues.
 
-## 🛠️ Development
+**Q: "Connection Failed" error?**  
+A: Double-check your Domain URL. It must include `https://` and (usually) end with `.atlassian.net` for Cloud. For server, ensure you are on the VPN.
 
-```bash
-# Install dependencies
-pnpm install
+**Q: Why are images missing in my markdown viewer?**  
+A: The extension downloads images to an `attachments/` subfolder. Ensure your Markdown viewer (Obsidian/VSCode) is configured to look for relative assets.
 
-# Watch for changes (development)
-pnpm watch:extension
+---
 
-# Build for production
-pnpm build:extension
+## 🏗 Architecture
 
-# Package for Chrome Web Store
-pnpm package:extension
-```
+This extension shares its core logic with the `conflu-exporter` CLI tool but is optimized for the browser environment.
 
-## 🐛 Troubleshooting
+- **Frontend:** React + Tailwind CSS
+- **Build Tool:** Vite
+- **Markdown Engine:** Turndown + Custom Plugins (GFM)
+- **State Management:** Chrome Storage API
 
-### "Connection failed" error
-- Verify your Confluence URL includes `https://`
-- Check that your email and API token are correct
-- Ensure you have read access to the space/pages
-
-### Export takes too long
-- Large pages with many attachments take longer
-- Try exporting without attachments first
-- Check your network connection
-
-### Context menu not appearing
-- Reload the extension in chrome://extensions
-- Refresh the Confluence page
-- Check for console errors in the service worker
+---
 
 ## 📝 License
-
-MIT License - see [LICENSE](../LICENSE)
+Copyright © 2024 TaiPhan.
+Released under the MIT License.
