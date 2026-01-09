@@ -42,12 +42,46 @@ export class CodeHandler {
    * Convert a code macro to markdown code fence
    */
   private convertToMarkdown(macro: ParsedMacro): string | null {
-    if (!this.macroParser.hasPlainTextBody(macro)) {
-      this.logger.warn('Code macro found without plain text body')
+    // Extract code from various possible sources
+    let code = ''
+
+    // Try plain text body first (most common)
+    if (this.macroParser.hasPlainTextBody(macro)) {
+      code = macro.body || ''
+    }
+    // Try rich text body (might contain code)
+    else if (macro.bodyType === 'rich' && macro.body) {
+      // Extract text content from rich body, stripping HTML tags
+      code = macro.body.replace(/<[^>]+>/g, '').trim()
+      this.logger.debug('Extracted code from rich text body')
+    }
+    // Check for attachment reference (like external file)
+    else {
+      const attachmentRef = this.macroParser.getMacroAttachmentReference(macro)
+      if (attachmentRef) {
+        this.logger.info(`Code macro references attachment: ${attachmentRef}`)
+        // Create a placeholder indicating the code is in an attachment
+        const language = this.macroParser.getMacroParameter(macro, 'language') || ''
+        const title = this.macroParser.getMacroParameter(macro, 'title') || attachmentRef
+        return (
+          `\n> **Code Block:** ${title}\n` +
+          `> \n` +
+          `> Language: ${language || 'Unknown'}\n` +
+          `> Source: [${attachmentRef}](./assets/${attachmentRef})\n\n`
+        )
+      }
+
+      // No code found in any format
+      this.logger.warn('Code macro found without plain text body or attachment')
+      const title = this.macroParser.getMacroParameter(macro, 'title') || 'Code Block'
+      return `\n> **${title}** _(code content not available)_\n\n`
+    }
+
+    if (!code.trim()) {
+      this.logger.warn('Code macro has empty content')
       return null
     }
 
-    const code = macro.body || ''
     const language = this.macroParser.getMacroParameter(macro, 'language') || ''
     const linenumbers = this.macroParser.getMacroParameter(macro, 'linenumbers')
     const title = this.macroParser.getMacroParameter(macro, 'title')

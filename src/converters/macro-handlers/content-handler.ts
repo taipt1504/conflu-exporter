@@ -224,12 +224,12 @@ export class ContentHandler {
     const maxLevel = this.macroParser.getMacroParameter(macro, 'maxLevel') || '7'
     const minLevel = this.macroParser.getMacroParameter(macro, 'minLevel') || '1'
 
-    // For now, add a placeholder comment that TOC should be generated
-    let markdown = `\n<!-- Table of Contents -->\n`
-    markdown += `<!-- TOC will be auto-generated from headings (levels ${minLevel}-${maxLevel}) -->\n`
+    // Use a unique text marker that will survive HTML to Markdown conversion
+    // Using {{}} format which won't be interpreted as markdown or HTML syntax
+    let markdown = `\n{{TOC_PLACEHOLDER_${minLevel}_${maxLevel}}}\n`
 
     if (printable) {
-      markdown += `<!-- Printable: true -->\n`
+      markdown += `{{TOC_PRINTABLE}}\n`
     }
 
     markdown += `\n`

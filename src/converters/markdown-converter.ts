@@ -63,6 +63,16 @@ export class MarkdownConverter extends BaseConverter {
    * Add custom Turndown rules for Confluence elements
    */
   private addCustomRules(service: TurndownService): void {
+    // Rule: Preserve HTML comments (needed for TOC placeholders)
+    service.addRule('preserveComments', {
+      filter: (node: any) => {
+        return node.nodeType === 8 // Node.COMMENT_NODE
+      },
+      replacement: (content) => {
+        return `<!-- ${content} -->`
+      },
+    })
+
     // Rule: Preserve code blocks that are already in markdown format
     service.addRule('preserveCodeBlocks', {
       filter: (node: any) => {
@@ -303,6 +313,9 @@ export class MarkdownConverter extends BaseConverter {
     // Replace mermaid placeholders with actual code blocks (CRITICAL: Must be done AFTER Turndown)
     markdown = this.htmlProcessor.replaceMermaidPlaceholders(markdown)
 
+    // Generate Table of Contents if placeholder exists
+    markdown = this.generateTableOfContents(markdown)
+
     // Add frontmatter if enabled
     if (this.options.frontmatter) {
       const frontmatter = this.generateFrontmatter(page, processed)
@@ -400,6 +413,109 @@ export class MarkdownConverter extends BaseConverter {
     }
 
     return markdown
+  }
+
+  /**
+   * Generate Table of Contents from headings
+   * Replaces TOC placeholder with actual TOC
+   */
+  private generateTableOfContents(markdown: string): string {
+    // Check if TOC placeholder exists (match backslash-escaped underscores: \_)
+    const tocPlaceholderMatch = markdown.match(/\{\{TOC\\_PLACEHOLDER\\_(\d+)\\_(\d+)\}\}/)
+    if (!tocPlaceholderMatch) {
+      return markdown
+    }
+
+    this.logger.debug('Generating Table of Contents from headings...')
+
+    const minLevel = parseInt(tocPlaceholderMatch[1], 10)
+    const maxLevel = parseInt(tocPlaceholderMatch[2], 10)
+
+    // Extract all headings from markdown
+    const headings: Array<{ level: number; text: string; anchor: string }> = []
+    const headingRegex = /^(#{1,6})\s+(.+)$/gm
+    let match
+
+    while ((match = headingRegex.exec(markdown)) !== null) {
+      const level = match[1].length
+      const text = match[2].trim()
+
+      // Remove markdown formatting from heading text
+      const cleanText = text
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links
+        .replace(/`([^`]+)`/g, '$1') // Remove inline code
+        .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
+        .replace(/\*([^*]+)\*/g, '$1') // Remove italic
+        .replace(/_([^_]+)_/g, '$1') // Remove italic underscore
+        .replace(/~~([^~]+)~~/g, '$1') // Remove strikethrough
+
+      // Generate anchor (GitHub-style)
+      const anchor = cleanText
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '') // Remove special chars
+        .replace(/\s+/g, '-') // Replace spaces with dashes
+        .replace(/-+/g, '-') // Replace multiple dashes with single
+        .replace(/^-|-$/g, '') // Trim dashes from ends
+
+      headings.push({ level, text: cleanText, anchor })
+    }
+
+    if (headings.length === 0) {
+      this.logger.debug('No headings found, removing TOC placeholder')
+      return markdown.replace(/\{\{TOC\\_PLACEHOLDER\\_\d+\\_\d+\}\}\n?\{\{TOC\\_PRINTABLE\}\}?\n?/g, '')
+    }
+
+    this.logger.info(`Generating TOC with ${headings.length} headings`)
+
+    // Build TOC markdown
+    let tocLines: string[] = []
+
+    for (const heading of headings) {
+      // Skip headings outside the level range
+      if (heading.level < minLevel || heading.level > maxLevel) {
+        continue
+      }
+
+      // Calculate indentation (0-based from minLevel)
+      const indent = '  '.repeat(heading.level - minLevel)
+
+      // Add TOC entry
+      tocLines.push(`${indent}- [${heading.text}](#${heading.anchor})`)
+    }
+
+    const tocMarkdown = tocLines.join('\n')
+
+    // Replace TOC placeholder with actual TOC
+    const replacement = `<!-- Table of Contents -->\n${tocMarkdown}\n`
+
+    // Debug: Find the exact placeholder text for replacement
+    const placeholderRegex = /\{\{TOC\\_PLACEHOLDER\\_\d+\\_\d+\}\}/g
+    const matches = markdown.match(placeholderRegex)
+    if (matches) {
+      this.logger.debug(`Found ${matches.length} TOC placeholder(s) to replace`)
+      matches.forEach((match, i) => {
+        this.logger.debug(`  Match ${i + 1}: "${match}" (${match.length} chars)`)
+      })
+    } else {
+      this.logger.warn('No TOC placeholder matches found in markdown!')
+    }
+
+    const result = markdown.replace(placeholderRegex, replacement)
+
+    // Verify replacement happened
+    if (result === markdown) {
+      this.logger.warn('TOC placeholder was not replaced!')
+      // Show a snippet of markdown around where we expect the placeholder
+      const snippetIndex = markdown.indexOf('TOC')
+      if (snippetIndex >= 0) {
+        const snippet = markdown.substring(Math.max(0, snippetIndex - 50), snippetIndex + 100)
+        this.logger.debug(`Markdown snippet around TOC: "${snippet}"`)
+      }
+    } else {
+      this.logger.info('✓ TOC placeholder replaced successfully')
+    }
+
+    return result
   }
 
   /**
