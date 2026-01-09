@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.3.2](https://github.com/taipt1504/conflu-exporter/compare/v1.3.1...v1.3.2) (2026-01-09)
+
+
+### 🐛 Bug Fixes
+
+* Implement TOC generation and enhance code macro handling ([d927958](https://github.com/taipt1504/conflu-exporter/commit/d927958eed98ac5fd51e0e4ce0173cd13eb623b9))
+
 ## [1.3.1](https://github.com/taipt1504/conflu-exporter/compare/v1.3.0...v1.3.1) (2026-01-08)
 
 
