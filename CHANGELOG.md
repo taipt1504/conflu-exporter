@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.4.1](https://github.com/taipt1504/conflu-exporter/compare/v1.4.0...v1.4.1) (2026-01-09)
+
+
+### 📚 Documentation
+
+* overhaul documentation project-wide ([38d40ee](https://github.com/taipt1504/conflu-exporter/commit/38d40ee3113b80a4209b36d219e384bc20434819))
+
 ## [1.4.0](https://github.com/taipt1504/conflu-exporter/compare/v1.3.2...v1.4.0) (2026-01-09)
 
 
